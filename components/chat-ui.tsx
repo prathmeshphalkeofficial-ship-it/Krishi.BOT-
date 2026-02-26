@@ -1,0 +1,144 @@
+﻿"use client"
+
+import { useState, useRef, useEffect, useCallback } from "react"
+import { Send, Bot, User, Sparkles, Leaf, Loader2 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { useApp } from "@/lib/app-context"
+import { t } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
+
+interface Message { id: string; role: "user" | "assistant"; text: string }
+
+export function ChatUI() {
+  const { language, setIsMotorOn } = useApp()
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [input, setInput] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      const el = scrollRef.current.querySelector("[data-radix-scroll-area-viewport]")
+      if (el) el.scrollTop = el.scrollHeight
+    }
+  }, [messages])
+
+  const sendMessage = useCallback(async (text: string) => {
+    if (!text.trim() || loading) return
+    setMessages(prev => [...prev, { id: `u${Date.now()}`, role: "user", text }])
+    setLoading(true)
+    const aiId = `a${Date.now()}`
+    setMessages(prev => [...prev, { id: aiId, role: "assistant", text: "" }])
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text, language }),
+      })
+      const data = await res.json()
+      const reply = (data.text || "Sorry, no response.").replace("[MOTOR_ON] ", "").replace("[MOTOR_OFF] ", "")
+      if (data.motorCommand === "on") setIsMotorOn(true)
+      if (data.motorCommand === "off") setIsMotorOn(false)
+      const words = reply.split(" ")
+      let acc = ""
+      for (let i = 0; i < words.length; i++) {
+        acc += (i === 0 ? "" : " ") + words[i]
+        const cur = acc
+        setMessages(prev => prev.map(m => m.id === aiId ? { ...m, text: cur } : m))
+        await new Promise(r => setTimeout(r, 12))
+      }
+    } catch {
+      setMessages(prev => prev.map(m => m.id === aiId ? { ...m, text: "Error. Please try again." } : m))
+    }
+    setLoading(false)
+    inputRef.current?.focus()
+  }, [loading, language, setIsMotorOn])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
+    const t = input; setInput(""); sendMessage(t)
+  }
+
+  const suggestions = [
+    "Who is CM of Maharashtra?",
+    "Best crops for this season?",
+    "How to control aphids?",
+    "What is PM-KISAN scheme?",
+    "Turn on the motor",
+    "What is photosynthesis?",
+  ]
+
+  return (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <div className="space-y-4 max-w-3xl mx-auto">
+          {messages.length === 0 && (
+            <>
+              <div className="flex gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+                  <Bot className="h-4 w-4 text-primary-foreground" />
+                </div>
+                <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-secondary px-4 py-3 text-sm">
+                  {t("chatWelcome", language)}
+                </div>
+              </div>
+              <div className="space-y-3 pt-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Sparkles className="h-4 w-4" /> Suggested Questions
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {suggestions.map((q, i) => (
+                    <button key={i} onClick={() => sendMessage(q)}
+                      className="flex items-center gap-2 p-3 rounded-xl border border-border bg-card text-sm text-left hover:bg-secondary transition-colors">
+                      <Leaf className="h-3.5 w-3.5 text-primary shrink-0" />{q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          {messages.map(msg => (
+            <div key={msg.id} className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}>
+              {msg.role === "assistant" && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary">
+                  <Bot className="h-4 w-4 text-primary-foreground" />
+                </div>
+              )}
+              <div className={cn("max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
+                msg.role === "user" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md")}>
+                {msg.role === "assistant" && msg.text === "" ? (
+                  <div className="flex gap-1.5 py-1">
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
+                    <span className="h-2 w-2 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
+                  </div>
+                ) : <div className="whitespace-pre-wrap">{msg.text}</div>}
+              </div>
+              {msg.role === "user" && (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+                  <User className="h-4 w-4 text-secondary-foreground" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="border-t border-border p-4 bg-card/50">
+        <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
+          <input ref={inputRef} type="text" value={input} onChange={e => setInput(e.target.value)}
+            placeholder={t("chatPlaceholder", language)} disabled={loading}
+            className="flex-1 h-11 rounded-xl border border-input bg-background px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
+          <Button type="submit" size="icon" disabled={!input.trim() || loading} className="h-11 w-11 rounded-xl shrink-0">
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </Button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+export default ChatUI
