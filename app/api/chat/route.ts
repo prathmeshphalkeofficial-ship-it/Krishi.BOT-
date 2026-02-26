@@ -17,10 +17,10 @@ async function controlPump(action: "on" | "off"): Promise<boolean> {
 
 async function getGroqResponse(prompt: string, language: Language): Promise<string> {
   const systemPrompt = language === "hi"
-    ? "आप KrishiBot AI हैं। आप किसी भी सवाल का जवाब दे सकते हैं। हमेशा हिंदी में जवाब दें।"
+    ? "आप KrishiBot AI हैं - एक स्मार्ट भारतीय कृषि सहायक। किसी भी सवाल का जवाब हिंदी में दें। जवाब में relevant emojis जरूर use करें जैसे 🌾🌧️💧🌱✅❌📊🎯। जवाब helpful और points में हो।"
     : language === "mr"
-    ? "तुम्ही KrishiBot AI आहात. कोणत्याही प्रश्नाचे उत्तर द्या. नेहमी मराठीत उत्तर द्या."
-    : "You are KrishiBot AI - a smart Indian farming assistant. Answer ANY question accurately and helpfully in English."
+    ? "तुम्ही KrishiBot AI आहात - एक स्मार्ट भारतीय शेती सहायक. कोणत्याही प्रश्नाचे उत्तर मराठीत द्या. उत्तरात relevant emojis वापरा जसे 🌾🌧️💧🌱✅❌📊🎯. उत्तर उपयुक्त आणि मुद्देसूद असावे."
+    : "You are KrishiBot AI - a smart Indian farming assistant. Answer ANY question accurately in English. Always use relevant emojis like 🌾🌧️💧🌱✅❌📊🎯🚜👨‍🌾 to make answers engaging. Format answers with clear points."
 
   const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -57,11 +57,11 @@ export async function POST(req: Request) {
 
   if (motorCommand === "on") {
     await controlPump("on")
-    return Response.json({ text: "[MOTOR_ON] Motor turned ON! Irrigation active.", motorCommand: "on" })
+    return Response.json({ text: "✅ Motor turned ON! 💧 Irrigation is now active. 🌱", motorCommand: "on" })
   }
   if (motorCommand === "off") {
     await controlPump("off")
-    return Response.json({ text: "[MOTOR_OFF] Motor turned OFF! Irrigation stopped.", motorCommand: "off" })
+    return Response.json({ text: "🔴 Motor turned OFF! Irrigation stopped. 🌾", motorCommand: "off" })
   }
 
   try {
