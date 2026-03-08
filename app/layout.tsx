@@ -10,31 +10,8 @@ const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
   title: 'KrishiBot AI Pro - Smart Multilingual Farming Assistant',
-<<<<<<< HEAD
   description: 'AI-powered smart farming platform with irrigation control, soil monitoring, weather updates, and multilingual voice assistant for Indian farmers.',
   generator: 'v0.app',
-  icons: {
-    icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
-    ],
-    apple: '/apple-icon.png',
-  },
-=======
-  description:
-    'AI-powered smart farming platform with irrigation control, soil monitoring, weather updates, and multilingual voice assistant for Indian farmers.',
-  generator: 'v0.app',
-
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -43,9 +20,7 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-touch-icon.png',
   },
-
   manifest: '/site.webmanifest',
->>>>>>> e9b6996 (Initial commit)
 }
 
 export const viewport: Viewport = {
@@ -64,16 +39,12 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="font-sans antialiased">
-<<<<<<< HEAD
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-=======
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
->>>>>>> e9b6996 (Initial commit)
           <AppProvider>
             <div className="flex min-h-screen flex-col bg-background">
               <Navbar />
@@ -85,8 +56,4 @@ export default function RootLayout({
       </body>
     </html>
   )
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> e9b6996 (Initial commit)
