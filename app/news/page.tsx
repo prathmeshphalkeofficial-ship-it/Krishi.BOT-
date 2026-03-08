@@ -440,11 +440,18 @@ export default function NewsPage() {
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className="text-lg font-bold text-foreground">₹{isNaN(modal) ? item.modal_price : modal.toLocaleString("en-IN")}</p>
-                          <p className={cn("text-[10px] font-semibold", trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-yellow-500")}>
-                            {trend === "up" ? t("Rising ↑", "बढ़ रहा ↑", "वाढत आहे ↑") : trend === "down" ? t("Falling ↓", "गिर रहा ↓", "घसरत आहे ↓") : t("Stable →", "स्थिर →", "स्थिर →")}
-                          </p>
-                          <p className="text-[9px] text-muted-foreground">{item.arrival_date}</p>
+                          <div className="text-right flex-shrink-0">
+  <p className="text-lg font-bold text-foreground">
+    ₹{isNaN(modal) ? "-" : (modal / 100).toFixed(1)}<span className="text-xs font-normal text-muted-foreground">/kg</span>
+  </p>
+  <p className="text-[10px] text-muted-foreground">
+    ₹{isNaN(modal) ? item.modal_price : modal.toLocaleString("en-IN")}/qtl
+  </p>
+  <p className={cn("text-[10px] font-semibold", trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-yellow-500")}>
+    {trend === "up" ? t("Rising ↑", "बढ़ रहा ↑", "वाढत आहे ↑") : trend === "down" ? t("Falling ↓", "गिर रहा ↓", "घसरत आहे ↓") : t("Stable →", "स्थिर →", "स्थिर →")}
+  </p>
+  <p className="text-[9px] text-muted-foreground">{item.arrival_date}</p>
+</div>
                         </div>
                       </div>
                     )
