@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquare, Mic, Settings, Leaf, Globe, Moon, Sun } from "lucide-react"
+import { LayoutDashboard, MessageSquare, Mic, Settings, Leaf, Globe, Moon, Sun, Newspaper } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useApp } from "@/lib/app-context"
 import { t, languages, type Language } from "@/lib/i18n"
@@ -19,6 +19,7 @@ const navItems = [
   { key: "dashboard" as const, href: "/", icon: LayoutDashboard },
   { key: "chatbot" as const, href: "/chat", icon: MessageSquare },
   { key: "voice" as const, href: "/voice", icon: Mic },
+  { key: "news" as const, href: "/news", icon: Newspaper },
   { key: "settings" as const, href: "/settings", icon: Settings },
 ]
 
@@ -106,7 +107,7 @@ export function Navbar() {
                 key={item.key}
                 href={item.href}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[60px]",
+                  "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[50px]",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground"

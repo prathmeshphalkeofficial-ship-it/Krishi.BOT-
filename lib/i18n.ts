@@ -12,6 +12,7 @@ type TranslationKeys = {
   chatbot: string
   voice: string
   settings: string
+  news: string
   appName: string
   tagline: string
 
@@ -82,6 +83,7 @@ const translations: Record<Language, TranslationKeys> = {
     chatbot: "AI Chat",
     voice: "Voice",
     settings: "Settings",
+    news: "News",
     appName: "KrishiBot AI",
     tagline: "Smart Farming Assistant",
 
@@ -145,6 +147,7 @@ const translations: Record<Language, TranslationKeys> = {
     chatbot: "AI चैट",
     voice: "आवाज़",
     settings: "सेटिंग्स",
+    news: "समाचार",
     appName: "कृषिबॉट AI",
     tagline: "स्मार्ट कृषि सहायक",
 
@@ -208,6 +211,7 @@ const translations: Record<Language, TranslationKeys> = {
     chatbot: "AI चॅट",
     voice: "आवाज",
     settings: "सेटिंग्ज",
+    news: "बातम्या",
     appName: "कृषिबॉट AI",
     tagline: "स्मार्ट शेती सहाय्यक",
 
