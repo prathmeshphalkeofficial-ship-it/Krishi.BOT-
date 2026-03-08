@@ -81,6 +81,7 @@ export default function NewsPage() {
   const [commodityCat, setCommodityCat] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [mandiSource, setMandiSource] = useState("")
+  const [mandiSourceUrl, setMandiSourceUrl] = useState("https://vegetablemarketprice.com/market/maharashtra/today")
 
   const t = useCallback((en: string, hi: string, mr: string) => {
     if (language === "hi") return hi
@@ -142,6 +143,7 @@ export default function NewsPage() {
       if (data.success && data.records?.length > 0) {
         setMandiData(data.records)
         setMandiSource(data.source)
+        setMandiSourceUrl(data.sourceUrl || "https://vegetablemarketprice.com/market/maharashtra/today")
       } else {
         setMandiError("No mandi data available right now.")
       }
@@ -422,6 +424,9 @@ export default function NewsPage() {
                     const modal = parseInt(item.modal_price)
                     return (
                       <div key={i} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-xl flex-shrink-0">
+                          {(item as any).emoji || "🌿"}
+                        </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold text-foreground">{item.commodity}</h3>
@@ -432,26 +437,21 @@ export default function NewsPage() {
                           <p className="text-[10px] text-muted-foreground">{item.market} · {item.variety}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-muted-foreground">
-                              {t("Min", "न्यूनतम", "किमान")} <span className="text-red-500 font-medium">₹{item.min_price}</span>
+                              {t("Min", "न्यूनतम", "किमान")} <span className="text-red-500 font-medium">₹{(parseInt(item.min_price)/100).toFixed(1)}/kg</span>
                             </span>
                             <span className="text-[10px] text-muted-foreground">
-                              {t("Max", "अधिकतम", "जास्तीत जास्त")} <span className="text-green-500 font-medium">₹{item.max_price}</span>
+                              {t("Max", "अधिकतम", "जास्तीत जास्त")} <span className="text-green-500 font-medium">₹{(parseInt(item.max_price)/100).toFixed(1)}/kg</span>
                             </span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <div className="text-right flex-shrink-0">
-  <p className="text-lg font-bold text-foreground">
-    ₹{isNaN(modal) ? "-" : (modal / 100).toFixed(1)}<span className="text-xs font-normal text-muted-foreground">/kg</span>
-  </p>
-  <p className="text-[10px] text-muted-foreground">
-    ₹{isNaN(modal) ? item.modal_price : modal.toLocaleString("en-IN")}/qtl
-  </p>
-  <p className={cn("text-[10px] font-semibold", trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-yellow-500")}>
-    {trend === "up" ? t("Rising ↑", "बढ़ रहा ↑", "वाढत आहे ↑") : trend === "down" ? t("Falling ↓", "गिर रहा ↓", "घसरत आहे ↓") : t("Stable →", "स्थिर →", "स्थिर →")}
-  </p>
-  <p className="text-[9px] text-muted-foreground">{item.arrival_date}</p>
-</div>
+                          <p className="text-lg font-bold text-foreground">
+                            ₹{(item as any).price_per_kg || (isNaN(modal) ? "-" : (modal/100).toFixed(1))}<span className="text-xs font-normal text-muted-foreground">/kg</span>
+                          </p>
+                          <p className={cn("text-[10px] font-semibold", trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-yellow-500")}>
+                            {trend === "up" ? t("Rising ↑", "बढ़ रहा ↑", "वाढत आहे ↑") : trend === "down" ? t("Falling ↓", "गिर रहा ↓", "घसरत आहे ↓") : t("Stable →", "स्थिर →", "स्थिर →")}
+                          </p>
+                          <p className="text-[9px] text-muted-foreground">{item.arrival_date}</p>
                         </div>
                       </div>
                     )
@@ -459,6 +459,27 @@ export default function NewsPage() {
                 </div>
               )}
             </>
+          )}
+
+          {/* Bottom source link */}
+          {!mandiLoading && !mandiError && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <a
+                href={mandiSourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors"
+              >
+                <span className="text-lg">🌾</span>
+                <span className="text-xs font-semibold text-primary">
+                  {t("View Full Prices on VegetableMarketPrice.com →", "VegetableMarketPrice.com पर पूरे भाव देखें →", "VegetableMarketPrice.com वर संपूर्ण भाव पाहा →")}
+                </span>
+                <ExternalLink className="h-3 w-3 text-primary" />
+              </a>
+              <p className="text-[10px] text-muted-foreground text-center mt-1.5">
+                {t("Source: vegetablemarketprice.com · Prices may vary by market", "स्रोत: vegetablemarketprice.com · भाव बाजार अनुसार भिन्न हो सकते हैं", "स्रोत: vegetablemarketprice.com · भाव बाजारानुसार बदलू शकतात")}
+              </p>
+            </div>
           )}
         </div>
       )}
