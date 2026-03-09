@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquare, Mic, Settings, Leaf, Globe, Moon, Sun, Newspaper } from "lucide-react"
+import { LayoutDashboard, MessageSquare, Mic, Settings, Leaf, Globe, Moon, Sun, Newspaper, Sprout } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useApp } from "@/lib/app-context"
 import { t, languages, type Language } from "@/lib/i18n"
@@ -61,6 +61,20 @@ export function Navbar() {
               </Link>
             )
           })}
+
+          {/* ── Spraying Link ── */}
+          <Link
+            href="/spraying"
+            className={cn(
+              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              pathname.startsWith("/spraying")
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+            )}
+          >
+            <Sprout className="h-4 w-4" />
+            Spraying
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -118,6 +132,20 @@ export function Navbar() {
               </Link>
             )
           })}
+
+          {/* ── Spraying Link (Mobile) ── */}
+          <Link
+            href="/spraying"
+            className={cn(
+              "flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg transition-colors min-w-[50px]",
+              pathname.startsWith("/spraying")
+                ? "text-primary"
+                : "text-muted-foreground"
+            )}
+          >
+            <Sprout className={cn("h-5 w-5", pathname.startsWith("/spraying") && "text-primary")} />
+            <span className="text-[10px] font-medium">Spraying</span>
+          </Link>
         </div>
       </nav>
     </>
