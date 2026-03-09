@@ -389,6 +389,23 @@ export default function MandiHistoryPage() {
               "महाराष्ट्र APMC बाजार डेटावर आधारित · ₹/kg"
             )}
           </p>
+
+          {/* Real-time source link */}
+          <a
+            href="https://vegetablemarketprice.com/market/maharashtra/history"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full mt-3 py-2.5 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors"
+          >
+            <span className="text-lg">📊</span>
+            <span className="text-xs font-semibold text-primary">
+              {t(
+                "View Real-Time History on VegetableMarketPrice.com →",
+                "VegetableMarketPrice.com पर रियल-टाइम इतिहास देखें →",
+                "VegetableMarketPrice.com वर रिअल-टाइम इतिहास पाहा →"
+              )}
+            </span>
+          </a>
         </div>
 
         {/* Back */}
