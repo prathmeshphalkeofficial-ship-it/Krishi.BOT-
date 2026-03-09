@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
 import {
   Newspaper, RefreshCw, ExternalLink, Clock, TrendingUp,
   Leaf, CloudRain, Bug, Wheat, AlertCircle, ArrowLeft,
@@ -36,28 +37,28 @@ type MandiItem = {
 }
 
 const newsCategories = [
-  { key: "all", label: { en: "All News", hi: "सभी समाचार", mr: "सर्व बातम्या" }, icon: Newspaper, query: "krishi farming agriculture india" },
-  { key: "crops", label: { en: "Crops", hi: "फसलें", mr: "पिके" }, icon: Wheat, query: "crops farming india kharif rabi" },
-  { key: "weather", label: { en: "Weather", hi: "मौसम", mr: "हवामान" }, icon: CloudRain, query: "monsoon weather india farmers" },
-  { key: "pest", label: { en: "Pest Control", hi: "कीट नियंत्रण", mr: "कीड नियंत्रण" }, icon: Bug, query: "pest crop disease india agriculture" },
-  { key: "market", label: { en: "Market News", hi: "बाजार समाचार", mr: "बाजार बातम्या" }, icon: TrendingUp, query: "mandi price MSP agriculture india" },
+  { key: "all",     label: { en: "All News",     hi: "सभी समाचार",    mr: "सर्व बातम्या"    }, icon: Newspaper, query: "krishi farming agriculture india" },
+  { key: "crops",   label: { en: "Crops",         hi: "फसलें",          mr: "पिके"             }, icon: Wheat,     query: "crops farming india kharif rabi" },
+  { key: "weather", label: { en: "Weather",       hi: "मौसम",           mr: "हवामान"           }, icon: CloudRain, query: "monsoon weather india farmers" },
+  { key: "pest",    label: { en: "Pest Control",  hi: "कीट नियंत्रण",  mr: "कीड नियंत्रण"   }, icon: Bug,       query: "pest crop disease india agriculture" },
+  { key: "market",  label: { en: "Market News",   hi: "बाजार समाचार",  mr: "बाजार बातम्या"   }, icon: TrendingUp, query: "mandi price MSP agriculture india" },
 ]
 
 const tagColors: Record<string, string> = {
-  all: "bg-primary/10 text-primary",
-  crops: "bg-green-500/10 text-green-600 dark:text-green-400",
+  all:     "bg-primary/10 text-primary",
+  crops:   "bg-green-500/10 text-green-600 dark:text-green-400",
   weather: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  pest: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-  market: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+  pest:    "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+  market:  "bg-purple-500/10 text-purple-600 dark:text-purple-400",
 }
 
-const MH_DISTRICTS = ["Pune", "Nashik", "Nagpur", "Aurangabad", "Solapur", "Kolhapur", "Ahmednagar", "Satara", "Sangli", "Latur"]
+const MH_DISTRICTS = ["Pune","Nashik","Nagpur","Aurangabad","Solapur","Kolhapur","Ahmednagar","Satara","Sangli","Latur"]
 
 const commodityCategories = [
-  { key: "all", label: { en: "All", hi: "सभी", mr: "सर्व" }, keywords: [] },
-  { key: "vegetable", label: { en: "Vegetables", hi: "सब्जियां", mr: "भाज्या" }, keywords: ["Tomato", "Onion", "Potato", "Brinjal", "Cabbage", "Cauliflower", "Carrot", "Capsicum", "Garlic", "Ginger", "Lady Finger", "Cucumber", "Pumpkin", "Bitter Gourd", "Bottle Gourd", "Drumstick", "Radish", "Spinach"] },
-  { key: "fruit", label: { en: "Fruits", hi: "फल", mr: "फळे" }, keywords: ["Banana", "Mango", "Grapes", "Pomegranate", "Orange", "Papaya", "Guava", "Watermelon", "Muskmelon", "Apple", "Lemon", "Pineapple"] },
-  { key: "crop", label: { en: "Crops", hi: "फसलें", mr: "पिके" }, keywords: ["Wheat", "Rice", "Soybean", "Cotton", "Maize", "Jowar", "Bajra", "Tur", "Gram", "Moong", "Urad", "Groundnut", "Sunflower"] },
+  { key: "all",       label: { en: "All",        hi: "सभी",       mr: "सर्व"   }, keywords: [] },
+  { key: "vegetable", label: { en: "Vegetables", hi: "सब्जियां",  mr: "भाज्या" }, keywords: ["Tomato","Onion","Potato","Brinjal","Cabbage","Cauliflower","Carrot","Capsicum","Garlic","Ginger","Lady Finger","Cucumber","Pumpkin","Bitter Gourd","Bottle Gourd","Drumstick","Radish","Spinach"] },
+  { key: "fruit",     label: { en: "Fruits",     hi: "फल",        mr: "फळे"    }, keywords: ["Banana","Mango","Grapes","Pomegranate","Orange","Papaya","Guava","Watermelon","Muskmelon","Apple","Lemon","Pineapple"] },
+  { key: "crop",      label: { en: "Crops",      hi: "फसलें",     mr: "पिके"   }, keywords: ["Wheat","Rice","Soybean","Cotton","Maize","Jowar","Bajra","Tur","Gram","Moong","Urad","Groundnut","Sunflower"] },
 ]
 
 export default function NewsPage() {
@@ -132,7 +133,7 @@ export default function NewsPage() {
     if (mainTab === "news") fetchNews()
   }, [fetchNews, mainTab])
 
-  // Fetch mandi via our own API route
+  // Fetch mandi
   const fetchMandi = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setMandiRefreshing(true)
     else setMandiLoading(true)
@@ -162,7 +163,7 @@ export default function NewsPage() {
   const formatDate = (dateStr: string) => {
     try {
       const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
-      if (diff < 60) return `${diff}m ago`
+      if (diff < 60)   return `${diff}m ago`
       if (diff < 1440) return `${Math.floor(diff / 60)}h ago`
       return `${Math.floor(diff / 1440)}d ago`
     } catch { return dateStr }
@@ -230,10 +231,10 @@ export default function NewsPage() {
             <div className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{selectedArticle.content}</div>
           ) : (
             <div className="bg-secondary/50 rounded-xl p-4 text-center mt-4">
-              <p className="text-sm text-muted-foreground mb-3">{t("Visit the original source to read the full article", "पूरा लेख पढ़ने के लिए मूल स्रोत पर जाएं", "संपूर्ण लेख वाचण्यासाठी मूळ स्रोतावर जा")}</p>
+              <p className="text-sm text-muted-foreground mb-3">{t("Visit the original source to read the full article","पूरा लेख पढ़ने के लिए मूल स्रोत पर जाएं","संपूर्ण लेख वाचण्यासाठी मूळ स्रोतावर जा")}</p>
               <a href={selectedArticle.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
                 <ExternalLink className="h-3.5 w-3.5" />
-                {t("Read Full Article", "पूरा लेख पढ़ें", "संपूर्ण लेख वाचा")}
+                {t("Read Full Article","पूरा लेख पढ़ें","संपूर्ण लेख वाचा")}
               </a>
             </div>
           )}
@@ -244,38 +245,50 @@ export default function NewsPage() {
 
   return (
     <div className="flex flex-col min-h-screen pb-20 md:pb-6">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="sticky top-0 md:top-16 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="flex items-center px-4 pt-3 pb-0 justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              {mainTab === "news" ? <Newspaper className="h-4 w-4 text-primary" /> : <ShoppingBasket className="h-4 w-4 text-primary" />}
+              {mainTab === "news"
+                ? <Newspaper className="h-4 w-4 text-primary" />
+                : <ShoppingBasket className="h-4 w-4 text-primary" />}
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground">
-                {mainTab === "news" ? t("Krishi News", "कृषि समाचार", "कृषी बातम्या") : t("Mandi Prices", "मंडी भाव", "मंडी भाव")}
+                {mainTab === "news"
+                  ? t("Krishi News","कृषि समाचार","कृषी बातम्या")
+                  : t("Mandi Prices","मंडी भाव","मंडी भाव")}
               </h1>
               <p className="text-[10px] text-muted-foreground">
                 {mainTab === "news"
-                  ? t("Live farming updates", "ताज़ा कृषि अपडेट", "ताज्या कृषी अपडेट")
+                  ? t("Live farming updates","ताज़ा कृषि अपडेट","ताज्या कृषी अपडेट")
                   : mandiSource === "mock"
-                    ? t("Reference prices · Updated daily", "संदर्भ मूल्य · प्रतिदिन अपडेट", "संदर्भ किंमती · दररोज अपडेट")
-                    : t("Live Maharashtra APMC rates", "महाराष्ट्र APMC लाइव भाव", "महाराष्ट्र APMC थेट भाव")}
+                    ? t("Reference prices · Updated daily","संदर्भ मूल्य · प्रतिदिन अपडेट","संदर्भ किंमती · दररोज अपडेट")
+                    : t("Live Maharashtra APMC rates","महाराष्ट्र APMC लाइव भाव","महाराष्ट्र APMC थेट भाव")}
               </p>
             </div>
           </div>
-          <button onClick={() => mainTab === "news" ? fetchNews(true) : fetchMandi(true)} className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary transition-colors">
+          <button
+            onClick={() => mainTab === "news" ? fetchNews(true) : fetchMandi(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
+          >
             <RefreshCw className={cn("h-4 w-4 text-muted-foreground", (newsRefreshing || mandiRefreshing) && "animate-spin")} />
           </button>
         </div>
 
         {/* Tab switch */}
         <div className="flex px-4 mt-2 gap-1 border-b border-border">
-          <button onClick={() => setMainTab("news")} className={cn("flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-colors", mainTab === "news" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
-            <Newspaper className="h-3.5 w-3.5" />{t("News", "समाचार", "बातम्या")}
+          <button onClick={() => setMainTab("news")}
+            className={cn("flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-colors",
+              mainTab === "news" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            <Newspaper className="h-3.5 w-3.5" />{t("News","समाचार","बातम्या")}
           </button>
-          <button onClick={() => setMainTab("mandi")} className={cn("flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-colors", mainTab === "mandi" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
-            <ShoppingBasket className="h-3.5 w-3.5" />{t("Mandi Prices", "मंडी भाव", "मंडी भाव")}
+          <button onClick={() => setMainTab("mandi")}
+            className={cn("flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-colors",
+              mainTab === "mandi" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground")}>
+            <ShoppingBasket className="h-3.5 w-3.5" />{t("Mandi Prices","मंडी भाव","मंडी भाव")}
           </button>
         </div>
 
@@ -285,7 +298,9 @@ export default function NewsPage() {
             {newsCategories.map((cat) => (
               <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
                 className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border",
-                  activeCategory === cat.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground")}>
+                  activeCategory === cat.key
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-card text-muted-foreground border-border hover:border-primary/50 hover:text-foreground")}>
                 <cat.icon className="h-3 w-3" />{getLabel(cat.label)}
               </button>
             ))}
@@ -300,7 +315,9 @@ export default function NewsPage() {
               {MH_DISTRICTS.map((d) => (
                 <button key={d} onClick={() => setSelectedDistrict(d)}
                   className={cn("px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap border transition-all",
-                    selectedDistrict === d ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/50")}>
+                    selectedDistrict === d
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-muted-foreground border-border hover:border-primary/50")}>
                   {d}
                 </button>
               ))}
@@ -310,36 +327,44 @@ export default function NewsPage() {
                 {commodityCategories.map((c) => (
                   <button key={c.key} onClick={() => setCommodityCat(c.key)}
                     className={cn("px-2.5 py-1 rounded-full text-[10px] font-medium whitespace-nowrap border transition-all",
-                      commodityCat === c.key ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border hover:border-primary/50")}>
+                      commodityCat === c.key
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-card text-muted-foreground border-border hover:border-primary/50")}>
                     {getLabel(c.label)}
                   </button>
                 ))}
               </div>
               <div className="flex items-center gap-1 bg-secondary rounded-lg px-2 py-1 flex-1 min-w-[80px]">
                 <Search className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  placeholder={t("Search...", "खोजें...", "शोधा...")}
-                  className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder={t("Search...","खोजें...","शोधा...")}
+                  className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground"
+                />
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* NEWS CONTENT */}
+      {/* ── NEWS CONTENT ── */}
       {mainTab === "news" && (
         <div className="flex-1 px-4 py-4 space-y-3">
           {newsLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <RefreshCw className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-sm text-muted-foreground">{t("Loading news...", "समाचार लोड हो रहे हैं...", "बातम्या लोड होत आहेत...")}</p>
+              <p className="text-sm text-muted-foreground">{t("Loading news...","समाचार लोड हो रहे हैं...","बातम्या लोड होत आहेत...")}</p>
             </div>
           )}
           {newsError && !newsLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <AlertCircle className="h-8 w-8 text-destructive" />
               <p className="text-sm text-muted-foreground text-center">{newsError}</p>
-              <button onClick={() => fetchNews()} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">{t("Try Again", "पुनः प्रयास करें", "पुन्हा प्रयत्न करा")}</button>
+              <button onClick={() => fetchNews()} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
+                {t("Try Again","पुनः प्रयास करें","पुन्हा प्रयत्न करा")}
+              </button>
             </div>
           )}
           {!newsLoading && !newsError && news.map((item, i) => (
@@ -366,7 +391,7 @@ export default function NewsPage() {
                   <div className="flex items-center gap-1 mt-2">
                     <Leaf className="h-3 w-3 text-primary" />
                     <span className="text-[10px] text-muted-foreground font-medium">{item.source_name}</span>
-                    <span className="ml-auto text-[10px] text-primary font-medium">{t("Read →", "पढ़ें →", "वाचा →")}</span>
+                    <span className="ml-auto text-[10px] text-primary font-medium">{t("Read →","पढ़ें →","वाचा →")}</span>
                   </div>
                 </div>
               </div>
@@ -375,47 +400,68 @@ export default function NewsPage() {
           {!newsLoading && !newsError && news.length === 0 && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Newspaper className="h-8 w-8 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">{t("No news found", "कोई समाचार नहीं मिला", "कोणत्याही बातम्या सापडल्या नाहीत")}</p>
+              <p className="text-sm text-muted-foreground">{t("No news found","कोई समाचार नहीं मिला","कोणत्याही बातम्या सापडल्या नाहीत")}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* MANDI CONTENT */}
+      {/* ── MANDI CONTENT ── */}
       {mainTab === "mandi" && (
         <div className="flex-1 px-4 py-4">
           {mandiLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <RefreshCw className="h-8 w-8 text-primary animate-spin" />
-              <p className="text-sm text-muted-foreground">{t("Loading mandi prices...", "मंडी भाव लोड हो रहे हैं...", "मंडी भाव लोड होत आहेत...")}</p>
+              <p className="text-sm text-muted-foreground">{t("Loading mandi prices...","मंडी भाव लोड हो रहे हैं...","मंडी भाव लोड होत आहेत...")}</p>
             </div>
           )}
           {mandiError && !mandiLoading && (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <AlertCircle className="h-8 w-8 text-destructive" />
               <p className="text-sm text-muted-foreground text-center">{mandiError}</p>
-              <button onClick={() => fetchMandi()} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">{t("Try Again", "पुनः प्रयास करें", "पुन्हा प्रयत्न करा")}</button>
+              <button onClick={() => fetchMandi()} className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
+                {t("Try Again","पुनः प्रयास करें","पुन्हा प्रयत्न करा")}
+              </button>
             </div>
           )}
+
           {!mandiLoading && !mandiError && (
             <>
+              {/* Stats row */}
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-muted-foreground">{filteredMandi.length} {t("commodities", "वस्तुएं", "वस्तू")} · {selectedDistrict}</p>
-                <p className="text-[10px] text-muted-foreground">{t("₹/Quintal", "₹/क्विंटल", "₹/क्विंटल")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {filteredMandi.length} {t("commodities","वस्तुएं","वस्तू")} · {selectedDistrict}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{t("₹/Quintal","₹/क्विंटल","₹/क्विंटल")}</p>
               </div>
 
               {/* Live badge */}
               {mandiSource !== "mock" && (
                 <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-green-500/10 rounded-lg w-fit">
                   <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">{t("Live APMC Data", "लाइव APMC डेटा", "थेट APMC डेटा")}</span>
+                  <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+                    {t("Live APMC Data","लाइव APMC डेटा","थेट APMC डेटा")}
+                  </span>
                 </div>
               )}
+
+              {/* ── 📈 History Chart Button ── */}
+              <Link
+                href="/mandi/history"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 mb-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors"
+              >
+                <TrendingUp className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-primary">
+                  {t("📈 View 30-Day Price History Charts","📈 30 दिन का मूल्य इतिहास देखें","📈 ३० दिवसांचा किंमत इतिहास पाहा")}
+                </span>
+              </Link>
 
               {filteredMandi.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <ShoppingBasket className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t("No data found", "कोई डेटा नहीं मिला", "कोणताही डेटा सापडला नाही")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("No data found","कोई डेटा नहीं मिला","कोणताही डेटा सापडला नाही")}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -430,26 +476,30 @@ export default function NewsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-semibold text-foreground">{item.commodity}</h3>
-                            {trend === "up" && <TrendingUp className="h-3.5 w-3.5 text-green-500" />}
-                            {trend === "down" && <TrendingDown className="h-3.5 w-3.5 text-red-500" />}
-                            {trend === "stable" && <Minus className="h-3.5 w-3.5 text-yellow-500" />}
+                            {trend === "up"     && <TrendingUp   className="h-3.5 w-3.5 text-green-500" />}
+                            {trend === "down"   && <TrendingDown className="h-3.5 w-3.5 text-red-500"   />}
+                            {trend === "stable" && <Minus        className="h-3.5 w-3.5 text-yellow-500"/>}
                           </div>
                           <p className="text-[10px] text-muted-foreground">{item.market} · {item.variety}</p>
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[10px] text-muted-foreground">
-                              {t("Min", "न्यूनतम", "किमान")} <span className="text-red-500 font-medium">₹{(parseInt(item.min_price)/100).toFixed(1)}/kg</span>
+                              {t("Min","न्यूनतम","किमान")} <span className="text-red-500 font-medium">₹{(parseInt(item.min_price)/100).toFixed(1)}/kg</span>
                             </span>
                             <span className="text-[10px] text-muted-foreground">
-                              {t("Max", "अधिकतम", "जास्तीत जास्त")} <span className="text-green-500 font-medium">₹{(parseInt(item.max_price)/100).toFixed(1)}/kg</span>
+                              {t("Max","अधिकतम","जास्तीत जास्त")} <span className="text-green-500 font-medium">₹{(parseInt(item.max_price)/100).toFixed(1)}/kg</span>
                             </span>
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className="text-lg font-bold text-foreground">
-                            ₹{(item as any).price_per_kg || (isNaN(modal) ? "-" : (modal/100).toFixed(1))}<span className="text-xs font-normal text-muted-foreground">/kg</span>
+                            ₹{(item as any).price_per_kg || (isNaN(modal) ? "-" : (modal/100).toFixed(1))}
+                            <span className="text-xs font-normal text-muted-foreground">/kg</span>
                           </p>
-                          <p className={cn("text-[10px] font-semibold", trend === "up" ? "text-green-500" : trend === "down" ? "text-red-500" : "text-yellow-500")}>
-                            {trend === "up" ? t("Rising ↑", "बढ़ रहा ↑", "वाढत आहे ↑") : trend === "down" ? t("Falling ↓", "गिर रहा ↓", "घसरत आहे ↓") : t("Stable →", "स्थिर →", "स्थिर →")}
+                          <p className={cn("text-[10px] font-semibold",
+                            trend==="up" ? "text-green-500" : trend==="down" ? "text-red-500" : "text-yellow-500")}>
+                            {trend==="up"     ? t("Rising ↑","बढ़ रहा ↑","वाढत आहे ↑")
+                           : trend==="down"   ? t("Falling ↓","गिर रहा ↓","घसरत आहे ↓")
+                           :                   t("Stable →","स्थिर →","स्थिर →")}
                           </p>
                           <p className="text-[9px] text-muted-foreground">{item.arrival_date}</p>
                         </div>
@@ -461,7 +511,7 @@ export default function NewsPage() {
             </>
           )}
 
-          {/* Bottom source link */}
+          {/* Source link */}
           {!mandiLoading && !mandiError && (
             <div className="mt-4 pt-3 border-t border-border">
               <a
@@ -472,12 +522,12 @@ export default function NewsPage() {
               >
                 <span className="text-lg">🌾</span>
                 <span className="text-xs font-semibold text-primary">
-                  {t("View Full Prices on VegetableMarketPrice.com →", "VegetableMarketPrice.com पर पूरे भाव देखें →", "VegetableMarketPrice.com वर संपूर्ण भाव पाहा →")}
+                  {t("View Full Prices on VegetableMarketPrice.com →","VegetableMarketPrice.com पर पूरे भाव देखें →","VegetableMarketPrice.com वर संपूर्ण भाव पाहा →")}
                 </span>
                 <ExternalLink className="h-3 w-3 text-primary" />
               </a>
               <p className="text-[10px] text-muted-foreground text-center mt-1.5">
-                {t("Source: vegetablemarketprice.com · Prices may vary by market", "स्रोत: vegetablemarketprice.com · भाव बाजार अनुसार भिन्न हो सकते हैं", "स्रोत: vegetablemarketprice.com · भाव बाजारानुसार बदलू शकतात")}
+                {t("Source: vegetablemarketprice.com · Prices may vary by market","स्रोत: vegetablemarketprice.com · भाव बाजार अनुसार भिन्न हो सकते हैं","स्रोत: vegetablemarketprice.com · भाव बाजारानुसार बदलू शकतात")}
               </p>
             </div>
           )}
