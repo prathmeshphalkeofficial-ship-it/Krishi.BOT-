@@ -1,75 +1,102 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { ph, nitrogen, phosphorus, potassium, organic, moisture, crop, soilType, language } = body;
+    const { ph, nitrogen, phosphorus, potassium, organicMatter, moisture, soilType, crop, language } = body;
 
-    if (!ph || !nitrogen || !phosphorus || !potassium) {
-      return NextResponse.json({ error: "missing_fields", message: "pH, N, P, K are required." }, { status: 400 });
-    }
-
-    const languageInstructions: Record<string, string> = {
+    const langInstructions: Record<string, string> = {
       en: "Respond in English.",
-      hi: "Respond in Hindi (हिंदी में जवाब दें).",
-      mr: "Respond in Marathi (मराठीत उत्तर द्या).",
+      hi: "हिंदी में उत्तर दें।",
+      mr: "मराठीत उत्तर द्या.",
     };
 
-    const prompt = `You are an expert Indian soil scientist and agronomist specializing in Maharashtra farming.
-${languageInstructions[language] || languageInstructions.en}
+    const systemPrompt = `You are an expert Indian agricultural soil scientist. Analyze soil data and return ONLY a valid JSON object with no extra text, no markdown fences.
 
-Analyze this soil data and respond ONLY with a valid JSON object (no markdown, no extra text):
-
-Soil Data:
-- Soil Type: ${soilType || "Unknown"}
-- pH: ${ph}
-- Nitrogen (N): ${nitrogen} kg/ha
-- Phosphorus (P): ${phosphorus} kg/ha
-- Potassium (K): ${potassium} kg/ha
-- Organic Matter: ${organic || "unknown"}%
-- Moisture: ${moisture || "unknown"}%
-- Intended Crop: ${crop || "not specified"}
-
-Return this exact JSON structure:
+JSON schema (all fields required):
 {
-  "score": <number 0-100 representing overall soil health>,
-  "overall_health": "<Excellent | Good | Fair | Poor>",
-  "summary": "<2 sentence summary of soil condition>",
-  "warnings": ["<critical issue 1>", "<critical issue 2>"],
-  "recommendations": ["<actionable recommendation 1>", "<recommendation 2>", "<recommendation 3>"],
-  "fertilizers": ["<specific fertilizer with dose 1>", "<fertilizer 2>", "<fertilizer 3>"],
-  "amendments": ["<soil amendment 1>", "<amendment 2>"],
-  "suitable_crops": ["<crop 1>", "<crop 2>", "<crop 3>", "<crop 4>", "<crop 5>"]
+  "score": number (0-100),
+  "overallHealth": string (1-2 sentences summary),
+  "warnings": string[] (2-4 specific issues),
+  "recommendations": string[] (3-5 actionable steps),
+  "fertilizers": [
+    {
+      "name": string (e.g. "DAP (18:46:0)"),
+      "dose": string (e.g. "50 kg/ha"),
+      "reason": string (why this fertilizer),
+      "costPerDose": number (approximate ₹ cost for that dose, Indian market price 2024)
+    }
+  ],
+  "amendments": string[] (e.g. ["Compost 5 tons/ha", "Farmyard manure 10 tons/ha"]),
+  "suitableCrops": string[] (5-6 crops suitable for these conditions),
+  "yieldPrediction": {
+    "crop": string (intended crop name),
+    "minYield": string (e.g. "3.8"),
+    "maxYield": string (e.g. "4.5"),
+    "unit": string (e.g. "tons")
+  }
 }
 
-Base the score on: pH balance (ideal 6-7.5), NPK levels (N ideal 280+, P ideal 25+, K ideal 110+ kg/ha for most crops), organic matter (ideal 2%+), and moisture. Warnings array can be empty [] if no issues.`;
+Score interpretation: 90-100=Excellent, 75-89=Good, 60-74=Moderate, <60=Poor.
+For fertilizer costPerDose use realistic 2024 Indian market prices:
+- Urea 45kg bag: ₹266 (govt MRP)
+- DAP 50kg bag: ₹1350
+- MOP 50kg bag: ₹850
+- SSP 50kg bag: ₹400
+- NPK 50kg bag: ₹1100
+Scale cost proportionally for the dose you recommend.
+For yield prediction, base on soil score and Indian regional average yields.
+${langInstructions[language] ?? langInstructions.en}`;
 
-    const response = await groq.chat.completions.create({
+    const userPrompt = `Soil Analysis Request:
+- pH: ${ph}
+- Nitrogen: ${nitrogen} kg/ha
+- Phosphorus: ${phosphorus} kg/ha
+- Potassium: ${potassium} kg/ha
+- Organic Matter: ${organicMatter}%
+- Moisture: ${moisture}%
+- Soil Type: ${soilType}
+- Intended Crop: ${crop}
+
+Analyze these values and provide the complete JSON response.`;
+
+    const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      max_tokens: 1024,
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 1200,
+      temperature: 0.3,
     });
 
-    const rawText = response.choices[0]?.message?.content || "";
+    const raw = completion.choices[0]?.message?.content ?? "";
+
+    // Strip markdown fences if present
+    const clean = raw.replace(/```json|```/gi, "").trim();
 
     let parsed;
     try {
-      const cleaned = rawText.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      parsed = JSON.parse(clean);
     } catch {
-      parsed = {
-        error: "parse_error",
-        message: "Could not analyze soil data. Please try again.",
-      };
+      // Attempt to extract JSON from response
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (match) {
+        parsed = JSON.parse(match[0]);
+      } else {
+        throw new Error("Invalid JSON from AI model");
+      }
     }
 
     return NextResponse.json(parsed);
   } catch (error: unknown) {
-    console.error("Soil analysis error:", error);
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: "server_error", message }, { status: 500 });
+    console.error("Soil API error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Analysis failed" },
+      { status: 500 }
+    );
   }
 }
