@@ -48,7 +48,7 @@ Return this exact JSON structure:
 Base the score on: pH balance (ideal 6-7.5), NPK levels (N ideal 280+, P ideal 25+, K ideal 110+ kg/ha for most crops), organic matter (ideal 2%+), and moisture. Warnings array can be empty [] if no issues.`;
 
     const response = await groq.chat.completions.create({
-      model: "llama3-8b-8192",
+      model: "llama-3.3-70b-versatile",
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     });
