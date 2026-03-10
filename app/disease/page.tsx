@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useAppContext } from "@/lib/app-context";
+import { useApp } from "@/lib/app-context";
 
 const translations = {
   en: {
@@ -115,7 +115,7 @@ const confidenceColors: Record<string, string> = {
 };
 
 export default function DiseasePage() {
-  const { language } = useAppContext();
+  const { language } = useApp();
   const t = translations[language as keyof typeof translations] || translations.en;
 
   const [image, setImage] = useState<string | null>(null);
