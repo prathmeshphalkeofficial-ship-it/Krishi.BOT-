@@ -1,415 +1,454 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useApp } from "@/lib/app-context";
+import { useState, useEffect, useCallback } from 'react'
+import { RefreshCw, MapPin, Thermometer, Wind, Droplets, CloudRain, Eye, Cloud, Gauge, Sunrise, Sunset, CheckCircle2, XCircle, AlertCircle, Sprout, Clock, ShieldCheck, ChevronRight } from 'lucide-react'
 
-const translations = {
-  en: {
-    title: "Spraying Advisor",
-    subtitle: "Check if conditions are safe for spraying today",
-    detecting: "Detecting your location...",
-    fetchingWeather: "Fetching weather data...",
-    allowLocation: "Allow Location",
-    allowDesc: "We need your location to fetch local weather conditions",
-    retry: "Try Again",
-    safe: "Safe to Spray ✅",
-    caution: "Spray with Caution ⚠️",
-    unsafe: "Not Safe to Spray ❌",
-    score: "Safety Score",
-    temperature: "Temperature",
-    wind: "Wind Speed",
-    humidity: "Humidity",
-    rain: "Rain Probability",
-    cloud: "Cloud Cover",
-    rainLastHour: "Rain Last Hour",
-    visibility: "Visibility",
-    sunrise: "Sunrise",
-    sunset: "Sunset",
-    conditions: "Conditions Check",
-    recommendations: "Recommendations",
-    bestTime: "Best Spray Time",
-    safetyTips: "Safety Tips",
-    good: "Good",
-    warning: "Warning",
-    danger: "Danger",
-    tip1: "Wear protective clothing and gloves",
-    tip2: "Avoid spraying near water bodies",
-    tip3: "Check wind direction before spraying",
-    tip4: "Wash hands thoroughly after spraying",
-    morning: "Early Morning (6–9 AM)",
-    evening: "Evening (5–7 PM)",
-    notRecommended: "Not Recommended Today",
-    locationError: "Could not get location. Please allow location access.",
-    weatherError: "Could not fetch weather data. Please try again.",
-  },
-  hi: {
-    title: "छिड़काव सलाहकार",
-    subtitle: "जाँचें कि आज छिड़काव के लिए स्थिति सुरक्षित है या नहीं",
-    detecting: "आपका स्थान पता लगाया जा रहा है...",
-    fetchingWeather: "मौसम डेटा प्राप्त हो रहा है...",
-    allowLocation: "स्थान अनुमति दें",
-    allowDesc: "स्थानीय मौसम जानने के लिए आपका स्थान चाहिए",
-    retry: "पुनः प्रयास करें",
-    safe: "छिड़काव सुरक्षित है ✅",
-    caution: "सावधानी से छिड़काव करें ⚠️",
-    unsafe: "छिड़काव सुरक्षित नहीं है ❌",
-    score: "सुरक्षा स्कोर",
-    temperature: "तापमान",
-    wind: "हवा की गति",
-    humidity: "आर्द्रता",
-    rain: "बारिश की संभावना",
-    cloud: "बादल",
-    rainLastHour: "पिछले घंटे बारिश",
-    visibility: "दृश्यता",
-    sunrise: "सूर्योदय",
-    sunset: "सूर्यास्त",
-    conditions: "स्थिति जाँच",
-    recommendations: "सुझाव",
-    bestTime: "सबसे अच्छा छिड़काव समय",
-    safetyTips: "सुरक्षा सुझाव",
-    good: "अच्छा",
-    warning: "चेतावनी",
-    danger: "खतरा",
-    tip1: "सुरक्षात्मक कपड़े और दस्ताने पहनें",
-    tip2: "पानी के पास छिड़काव से बचें",
-    tip3: "छिड़काव से पहले हवा की दिशा देखें",
-    tip4: "छिड़काव के बाद हाथ अच्छी तरह धोएं",
-    morning: "सुबह जल्दी (6–9 बजे)",
-    evening: "शाम (5–7 बजे)",
-    notRecommended: "आज अनुशंसित नहीं",
-    locationError: "स्थान नहीं मिला। कृपया अनुमति दें।",
-    weatherError: "मौसम डेटा नहीं मिला। पुनः प्रयास करें।",
-  },
-  mr: {
-    title: "फवारणी सल्लागार",
-    subtitle: "आज फवारणीसाठी परिस्थिती सुरक्षित आहे का ते तपासा",
-    detecting: "तुमचे स्थान शोधत आहे...",
-    fetchingWeather: "हवामान डेटा मिळवत आहे...",
-    allowLocation: "स्थान परवानगी द्या",
-    allowDesc: "स्थानिक हवामान जाणण्यासाठी तुमचे स्थान आवश्यक आहे",
-    retry: "पुन्हा प्रयत्न करा",
-    safe: "फवारणी सुरक्षित आहे ✅",
-    caution: "सावधानीने फवारणी करा ⚠️",
-    unsafe: "फवारणी सुरक्षित नाही ❌",
-    score: "सुरक्षा स्कोर",
-    temperature: "तापमान",
-    wind: "वाऱ्याचा वेग",
-    humidity: "आर्द्रता",
-    rain: "पावसाची शक्यता",
-    cloud: "ढग",
-    rainLastHour: "मागील तासात पाऊस",
-    visibility: "दृश्यमानता",
-    sunrise: "सूर्योदय",
-    sunset: "सूर्यास्त",
-    conditions: "परिस्थिती तपासणी",
-    recommendations: "शिफारसी",
-    bestTime: "सर्वोत्तम फवारणी वेळ",
-    safetyTips: "सुरक्षा टिप्स",
-    good: "चांगले",
-    warning: "इशारा",
-    danger: "धोका",
-    tip1: "संरक्षणात्मक कपडे आणि हातमोजे घाला",
-    tip2: "पाण्याजवळ फवारणी टाळा",
-    tip3: "फवारणीपूर्वी वाऱ्याची दिशा तपासा",
-    tip4: "फवारणीनंतर हात नीट धुवा",
-    morning: "पहाटे (सकाळी ६–९)",
-    evening: "संध्याकाळी (५–७)",
-    notRecommended: "आज शिफारस नाही",
-    locationError: "स्थान मिळाले नाही. कृपया परवानगी द्या.",
-    weatherError: "हवामान डेटा मिळाला नाही. पुन्हा प्रयत्न करा.",
-  },
-};
-
-type WeatherData = {
-  temp: number;
-  windSpeed: number;
-  windDeg: number;
-  humidity: number;
-  rainProbability: number;
-  cloudCover: number;
-  rainLastHour: number;
-  visibility: number;
-  sunrise: number;
-  sunset: number;
-  description: string;
-  city: string;
-};
-
-function calcScore(w: WeatherData): number {
-  let score = 100;
-  if (w.windSpeed > 15) score -= 40;
-  else if (w.windSpeed > 10) score -= 20;
-  else if (w.windSpeed > 5) score -= 10;
-  if (w.rainProbability > 60) score -= 30;
-  else if (w.rainProbability > 30) score -= 15;
-  if (w.rainLastHour > 0) score -= 20;
-  if (w.temp > 35) score -= 15;
-  else if (w.temp < 10) score -= 10;
-  if (w.humidity > 90) score -= 10;
-  if (w.cloudCover > 80) score -= 5;
-  return Math.max(0, Math.min(100, score));
+interface WeatherData {
+  temp: number
+  feelsLike: number
+  humidity: number
+  windSpeed: number
+  windDeg: number
+  rainProbability: number
+  cloudCover: number
+  rainLastHour: number
+  visibility: number
+  pressure: number
+  description: string
+  city: string
+  country: string
+  sunrise: string
+  sunset: string
 }
 
-function formatTime(unix: number): string {
-  return new Date(unix * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+function getWindDirection(deg: number): string {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+  return dirs[Math.round(deg / 45) % 8]
 }
 
-export default function SprayingPage() {
-  const { language } = useApp();
-  const tr = translations[language as keyof typeof translations] || translations.en;
+function calcSprayScore(w: WeatherData): number {
+  let score = 100
 
-  const [status, setStatus] = useState<"idle" | "locating" | "fetching" | "done" | "error">("idle");
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [error, setError] = useState("");
+  // Temperature: ideal 15–30°C
+  if (w.temp > 35) score -= 30
+  else if (w.temp > 30) score -= 15
+  else if (w.temp < 10) score -= 25
+  else if (w.temp < 15) score -= 10
 
-  const fetchWeather = () => {
-    setStatus("locating");
-    setError("");
+  // Wind: ideal < 15 km/h
+  const windKmh = w.windSpeed * 3.6
+  if (windKmh > 25) score -= 35
+  else if (windKmh > 15) score -= 20
+  else if (windKmh > 10) score -= 5
+
+  // Humidity: ideal 40–80%
+  if (w.humidity < 20) score -= 25
+  else if (w.humidity < 40) score -= 15
+  else if (w.humidity > 90) score -= 20
+  else if (w.humidity > 80) score -= 10
+
+  // Rain probability
+  if (w.rainProbability > 70) score -= 30
+  else if (w.rainProbability > 40) score -= 15
+  else if (w.rainProbability > 20) score -= 5
+
+  // Rain last hour
+  if (w.rainLastHour > 2) score -= 20
+  else if (w.rainLastHour > 0) score -= 10
+
+  // Cloud cover: slight cloud is fine
+  if (w.cloudCover > 80) score -= 5
+
+  return Math.max(0, Math.min(100, score))
+}
+
+type CondStatus = 'good' | 'warning' | 'danger'
+
+interface Condition {
+  label: string
+  sublabel: string
+  value: string
+  status: CondStatus
+  icon: React.ReactNode
+  statusIcon: React.ReactNode
+}
+
+function getConditions(w: WeatherData): Condition[] {
+  const windKmh = (w.windSpeed * 3.6).toFixed(1)
+
+  const tempStatus: CondStatus = w.temp > 35 ? 'danger' : w.temp > 30 || w.temp < 15 ? 'warning' : 'good'
+  const windStatus: CondStatus = parseFloat(windKmh) > 25 ? 'danger' : parseFloat(windKmh) > 15 ? 'warning' : 'good'
+  const humStatus: CondStatus = w.humidity < 20 ? 'danger' : w.humidity < 40 || w.humidity > 80 ? 'warning' : 'good'
+  const rainStatus: CondStatus = w.rainProbability > 70 ? 'danger' : w.rainProbability > 30 ? 'warning' : 'good'
+
+  const statusIcon = (s: CondStatus) => s === 'good'
+    ? <CheckCircle2 className="w-4 h-4 text-green-400" />
+    : s === 'warning'
+    ? <AlertCircle className="w-4 h-4 text-yellow-400" />
+    : <XCircle className="w-4 h-4 text-red-400" />
+
+  return [
+    {
+      label: 'Temperature',
+      sublabel: `Feels ${w.feelsLike}°C — ideal 15–30°C`,
+      value: `${w.temp}°C`,
+      status: tempStatus,
+      icon: <Thermometer className="w-4 h-4" />,
+      statusIcon: statusIcon(tempStatus),
+    },
+    {
+      label: 'Wind Speed',
+      sublabel: parseFloat(windKmh) <= 15 ? 'Safe — minimal drift risk' : parseFloat(windKmh) <= 25 ? 'Moderate — some drift possible' : 'High — spray drift risk',
+      value: `${windKmh} km/h`,
+      status: windStatus,
+      icon: <Wind className="w-4 h-4" />,
+      statusIcon: statusIcon(windStatus),
+    },
+    {
+      label: 'Humidity',
+      sublabel: `Ideal 40–80% — ${w.humidity < 40 ? 'Low' : w.humidity > 80 ? 'High' : 'Optimal'}`,
+      value: `${w.humidity}%`,
+      status: humStatus,
+      icon: <Droplets className="w-4 h-4" />,
+      statusIcon: statusIcon(humStatus),
+    },
+    {
+      label: 'Rain Probability',
+      sublabel: w.rainProbability < 30 ? 'Low rain risk — safe window' : w.rainProbability < 70 ? 'Moderate rain risk' : 'High rain risk — avoid spraying',
+      value: `${w.rainProbability}%`,
+      status: rainStatus,
+      icon: <CloudRain className="w-4 h-4" />,
+      statusIcon: statusIcon(rainStatus),
+    },
+  ]
+}
+
+function getRecommendations(w: WeatherData): { title: string; detail: string; type: 'warning' | 'danger' | 'info' }[] {
+  const recs: { title: string; detail: string; type: 'warning' | 'danger' | 'info' }[] = []
+
+  if (w.temp > 30) {
+    recs.push({
+      title: 'Slightly hot',
+      detail: 'Spray before 9 AM to avoid rapid evaporation in the heat.',
+      type: 'warning',
+    })
+  }
+  if (w.humidity < 40) {
+    recs.push({
+      title: 'Humidity too low',
+      detail: 'Below 30% RH causes spray to evaporate before reaching the crop. Spray at dawn.',
+      type: 'danger',
+    })
+  }
+  if (w.rainProbability > 60) {
+    recs.push({
+      title: 'Rain expected soon',
+      detail: 'High rain probability — spray may wash off. Wait for clear weather.',
+      type: 'danger',
+    })
+  }
+  if (w.rainLastHour > 0) {
+    recs.push({
+      title: 'Recent rainfall detected',
+      detail: `${w.rainLastHour}mm rain in last hour. Wait 2–4 hours for foliage to dry.`,
+      type: 'danger',
+    })
+  }
+  if (w.windSpeed * 3.6 > 15) {
+    recs.push({
+      title: 'Wind speed elevated',
+      detail: 'Wind drift may reduce effectiveness. Spray perpendicular to wind direction.',
+      type: 'warning',
+    })
+  }
+  if (recs.length === 0) {
+    recs.push({
+      title: 'Conditions are good',
+      detail: 'Weather is suitable for spraying. Follow standard safety protocols.',
+      type: 'info',
+    })
+  }
+  return recs
+}
+
+const statusBg: Record<CondStatus, string> = {
+  good: 'border-green-800/40 bg-green-900/10',
+  warning: 'border-yellow-700/40 bg-yellow-900/10',
+  danger: 'border-red-800/40 bg-red-900/10',
+}
+
+export default function SprayingAdvisorPage() {
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null)
+
+  const fetchWeather = useCallback(async (lat: number, lon: number) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/weather?lat=${lat}&lon=${lon}`)
+      if (!res.ok) throw new Error('Failed to fetch weather')
+      const data = await res.json()
+      setWeather(data)
+      const now = new Date()
+      setLastUpdated(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false }))
+    } catch {
+      setError('Unable to fetch weather data. Check your API key.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const getLocation = useCallback(() => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported')
+      return
+    }
     navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        setStatus("fetching");
-        try {
-          const res = await fetch(
-            `/api/weather?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`
-          );
-          const data = await res.json();
-          if (data.error) throw new Error(data.error);
-          setWeather(data);
-          setStatus("done");
-        } catch {
-          setError(tr.weatherError);
-          setStatus("error");
-        }
+      (pos) => {
+        const { latitude, longitude } = pos.coords
+        setCoords({ lat: latitude, lon: longitude })
+        fetchWeather(latitude, longitude)
       },
       () => {
-        setError(tr.locationError);
-        setStatus("error");
+        // fallback: Pune
+        setCoords({ lat: 18.5204, lon: 73.8567 })
+        fetchWeather(18.5204, 73.8567)
       }
-    );
-  };
+    )
+  }, [fetchWeather])
 
   useEffect(() => {
-    fetchWeather();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    getLocation()
+  }, [getLocation])
 
-  const score = weather ? calcScore(weather) : 0;
-  const verdict = score >= 60 ? "safe" : score >= 40 ? "caution" : "unsafe";
-  const verdictText = verdict === "safe" ? tr.safe : verdict === "caution" ? tr.caution : tr.unsafe;
-  const verdictColor =
-    verdict === "safe"
-      ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/30"
-      : verdict === "caution"
-      ? "text-yellow-400 bg-yellow-400/10 border-yellow-400/30"
-      : "text-red-400 bg-red-400/10 border-red-400/30";
-  const scoreColor =
-    verdict === "safe" ? "text-emerald-400" : verdict === "caution" ? "text-yellow-400" : "text-red-400";
-
-  const conditionStatus = (type: string): "good" | "warning" | "danger" => {
-    if (!weather) return "good";
-    switch (type) {
-      case "wind":
-        return weather.windSpeed > 15 ? "danger" : weather.windSpeed > 10 ? "warning" : "good";
-      case "rain":
-        return weather.rainProbability > 60 || weather.rainLastHour > 0
-          ? "danger"
-          : weather.rainProbability > 30
-          ? "warning"
-          : "good";
-      case "temp":
-        return weather.temp > 35 || weather.temp < 10 ? "danger" : weather.temp > 30 ? "warning" : "good";
-      case "humidity":
-        return weather.humidity > 90 ? "danger" : weather.humidity > 75 ? "warning" : "good";
-      default:
-        return "good";
-    }
-  };
-
-  const statusColor = (s: "good" | "warning" | "danger") =>
-    s === "good"
-      ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
-      : s === "warning"
-      ? "text-yellow-400 bg-yellow-400/10 border-yellow-400/20"
-      : "text-red-400 bg-red-400/10 border-red-400/20";
-
-  const statusLabel = (s: "good" | "warning" | "danger") =>
-    s === "good" ? tr.good : s === "warning" ? tr.warning : tr.danger;
-
-  const recommendations: string[] = [];
-  if (weather) {
-    if (weather.windSpeed > 10)
-      recommendations.push(language === "hi" ? "हवा बहुत तेज है — छिड़काव न करें" : language === "mr" ? "वारा खूप जोरात आहे — फवारणी करू नका" : "Wind too high — avoid spraying");
-    if (weather.rainProbability > 50)
-      recommendations.push(language === "hi" ? "बारिश की संभावना अधिक है — कल प्रयास करें" : language === "mr" ? "पावसाची शक्यता जास्त — उद्या प्रयत्न करा" : "High rain chance — try tomorrow");
-    if (weather.rainLastHour > 0)
-      recommendations.push(language === "hi" ? "पिछले घंटे बारिश हुई — पत्तियाँ गीली हैं" : language === "mr" ? "मागील तासात पाऊस — पाने ओली आहेत" : "Recent rain — leaves are wet");
-    if (weather.temp > 32)
-      recommendations.push(language === "hi" ? "तापमान अधिक है — सुबह या शाम छिड़काव करें" : language === "mr" ? "तापमान जास्त — सकाळी किंवा संध्याकाळी फवारणी करा" : "High temp — spray in morning or evening");
-    if (recommendations.length === 0)
-      recommendations.push(language === "hi" ? "स्थितियाँ अनुकूल हैं — छिड़काव कर सकते हैं" : language === "mr" ? "परिस्थिती अनुकूल आहे — फवारणी करता येईल" : "Conditions are favorable — safe to spray");
+  const handleRefresh = () => {
+    if (coords) fetchWeather(coords.lat, coords.lon)
+    else getLocation()
   }
 
-  const bestTime =
-    verdict === "unsafe" ? tr.notRecommended : score >= 70 ? tr.morning : tr.evening;
+  const score = weather ? calcSprayScore(weather) : null
+  const isSafe = score !== null && score >= 60
+  const conditions = weather ? getConditions(weather) : []
+  const recommendations = weather ? getRecommendations(weather) : []
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <div className="min-h-screen bg-background text-foreground pb-24">
       {/* Header */}
-      <div className="relative overflow-hidden border-b border-border bg-card/50">
-        <div
-          className="absolute inset-0 opacity-5"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 20% 50%, var(--color-primary) 0%, transparent 60%)",
-          }}
-        />
-        <div className="relative px-4 py-6 md:px-8 md:py-10 max-w-2xl mx-auto">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center text-xl">
-              💧
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-foreground">{tr.title}</h1>
-              <p className="text-sm text-muted-foreground">{tr.subtitle}</p>
-            </div>
+      <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3 flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Sprout className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-base">Spraying Advisor</span>
           </div>
+          {weather && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">
+                {weather.city}, {weather.country} · Live · Updated {lastUpdated}
+              </span>
+            </div>
+          )}
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-1.5 text-sm text-primary border border-primary/30 rounded-lg px-3 py-1.5 hover:bg-primary/10 transition-colors"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-        {/* Loading States */}
-        {(status === "locating" || status === "fetching") && (
-          <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-4">
-            <div className="w-10 h-10 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-            <p className="text-muted-foreground text-sm">
-              {status === "locating" ? tr.detecting : tr.fetchingWeather}
-            </p>
-          </div>
-        )}
+      {error && (
+        <div className="mx-4 mt-4 p-3 rounded-lg bg-red-900/20 border border-red-800/40 text-red-400 text-sm">
+          {error}
+        </div>
+      )}
 
-        {/* Idle / Error */}
-        {(status === "idle" || status === "error") && (
-          <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-4 text-center">
-            <div className="text-4xl">📍</div>
-            <div>
-              <p className="font-medium text-foreground mb-1">{tr.allowLocation}</p>
-              <p className="text-sm text-muted-foreground">{error || tr.allowDesc}</p>
-            </div>
-            <button
-              onClick={fetchWeather}
-              className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm hover:opacity-90 transition-opacity"
-            >
-              {status === "error" ? tr.retry : tr.allowLocation}
-            </button>
+      {loading && !weather && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-muted-foreground flex flex-col items-center gap-3">
+            <RefreshCw className="w-6 h-6 animate-spin text-primary" />
+            <span className="text-sm">Fetching live weather…</span>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Results */}
-        {status === "done" && weather && (
-          <>
-            {/* Score + Verdict */}
-            <div className="rounded-2xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  {weather.city && (
-                    <p className="text-xs text-muted-foreground mb-1">📍 {weather.city}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground capitalize">{weather.description}</p>
-                </div>
-                <div className="text-center">
-                  <div className={`text-4xl font-bold ${scoreColor}`}>{score}</div>
-                  <div className="text-xs text-muted-foreground">{tr.score}</div>
-                </div>
+      {weather && (
+        <div className="px-4 pt-4 space-y-5">
+          {/* Hero temp + score */}
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-xl">
+                {weather.cloudCover > 60 ? '☁️' : weather.cloudCover > 20 ? '⛅' : '☀️'}
               </div>
-              <div className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border font-semibold text-sm ${verdictColor}`}>
-                {verdictText}
+              <div>
+                <div className="text-5xl font-bold tracking-tight">{weather.temp}°C</div>
+                <div className="text-sm text-muted-foreground capitalize">{weather.description}</div>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium ${
+                  isSafe
+                    ? 'border-green-600 text-green-400 bg-green-900/20'
+                    : 'border-red-600 text-red-400 bg-red-900/20'
+                }`}
+              >
+                {isSafe ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                {isSafe ? 'Safe to Spray' : 'Avoid Spraying'}
+              </div>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold ${
+                  isSafe ? 'bg-green-700 text-white' : 'bg-red-800 text-white'
+                }`}
+              >
+                {score}
+              </div>
+            </div>
+          </div>
 
-            {/* Weather Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
+          {/* Live weather grid */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Complete Live Weather Data</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[
-                { label: tr.temperature, value: `${Math.round(weather.temp)}°C`, icon: "🌡️" },
-                { label: tr.wind, value: `${weather.windSpeed} km/h`, icon: "💨" },
-                { label: tr.humidity, value: `${weather.humidity}%`, icon: "💧" },
-                { label: tr.rain, value: `${weather.rainProbability}%`, icon: "🌧️" },
-                { label: tr.cloud, value: `${weather.cloudCover}%`, icon: "☁️" },
-                { label: tr.rainLastHour, value: `${weather.rainLastHour} mm`, icon: "🌂" },
-                { label: tr.sunrise, value: formatTime(weather.sunrise), icon: "🌅" },
-                { label: tr.sunset, value: formatTime(weather.sunset), icon: "🌇" },
-              ].map((stat, i) => (
-                <div key={i} className="rounded-xl border border-border bg-card p-3 flex items-center gap-3">
-                  <span className="text-xl">{stat.icon}</span>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
-                    <p className="text-sm font-semibold text-foreground">{stat.value}</p>
+                { icon: <Thermometer className="w-4 h-4 text-orange-400" />, value: `${weather.temp}°C`, label: 'Temperature', sub: `Feels ${weather.feelsLike}°C` },
+                { icon: <Wind className="w-4 h-4 text-blue-400" />, value: `${(weather.windSpeed * 3.6).toFixed(1)} km/h`, label: 'Wind Speed', sub: `Direction: ${getWindDirection(weather.windDeg)}` },
+                { icon: <Droplets className="w-4 h-4 text-cyan-400" />, value: `${weather.humidity}%`, label: 'Humidity', sub: weather.humidity < 40 ? 'Low' : weather.humidity > 80 ? 'High' : 'Optimal' },
+                { icon: <CloudRain className="w-4 h-4 text-sky-400" />, value: `${weather.rainProbability}%`, label: 'Rain Probability', sub: 'Next 3 hours — real data' },
+                { icon: <Gauge className="w-4 h-4 text-purple-400" />, value: `${weather.pressure} hPa`, label: 'Pressure', sub: 'Atmospheric' },
+                { icon: <Eye className="w-4 h-4 text-teal-400" />, value: `${weather.visibility.toFixed(1)} km`, label: 'Visibility', sub: weather.visibility > 5 ? 'Clear' : 'Hazy' },
+                { icon: <Cloud className="w-4 h-4 text-slate-400" />, value: `${weather.cloudCover}%`, label: 'Cloud Cover', sub: weather.cloudCover < 20 ? 'Mostly clear' : weather.cloudCover < 60 ? 'Partly cloudy' : 'Overcast' },
+                { icon: <Droplets className="w-4 h-4 text-blue-300" />, value: `${weather.rainLastHour} mm`, label: 'Rain Last Hour', sub: weather.rainLastHour === 0 ? 'No recent rain' : 'Recent rain detected' },
+                { icon: <Sunrise className="w-4 h-4 text-yellow-400" />, value: weather.sunrise, label: 'Sunrise', sub: 'Morning spray starts' },
+                { icon: <Sunset className="w-4 h-4 text-orange-500" />, value: weather.sunset, label: 'Sunset', sub: 'Evening spray ends' },
+              ].map((item, i) => (
+                <div key={i} className="bg-card border border-border rounded-xl p-3">
+                  {item.icon}
+                  <div className="mt-2 text-lg font-semibold">{item.value}</div>
+                  <div className="text-xs text-muted-foreground">{item.label}</div>
+                  <div className="text-xs text-muted-foreground/70">{item.sub}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Conditions Check */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Spraying Conditions Check</p>
+            <div className="space-y-2">
+              {conditions.map((c, i) => (
+                <div key={i} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${statusBg[c.status]}`}>
+                  <div className="flex items-center gap-3">
+                    {c.statusIcon}
+                    <span className="text-muted-foreground">{c.icon}</span>
+                    <div>
+                      <div className="text-sm font-medium">{c.label}</div>
+                      <div className="text-xs text-muted-foreground">{c.sublabel}</div>
+                    </div>
+                  </div>
+                  <div className={`text-sm font-semibold ${c.status === 'good' ? 'text-green-400' : c.status === 'warning' ? 'text-yellow-400' : 'text-red-400'}`}>
+                    {c.value}
                   </div>
                 </div>
               ))}
             </div>
+          </div>
 
-            {/* Conditions Check */}
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <h3 className="font-semibold text-foreground text-sm mb-3">🔍 {tr.conditions}</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {(["wind", "rain", "temp", "humidity"] as const).map((type) => {
-                  const s = conditionStatus(type);
-                  const labels = { wind: tr.wind, rain: tr.rain, temp: tr.temperature, humidity: tr.humidity };
-                  return (
-                    <div key={type} className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium ${statusColor(s)}`}>
-                      <span>{labels[type]}</span>
-                      <span>{statusLabel(s)}</span>
-                    </div>
-                  );
-                })}
+          {/* Recommendations */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Recommendations</p>
+            <div className="space-y-2">
+              {recommendations.map((r, i) => (
+                <div
+                  key={i}
+                  className={`p-4 rounded-xl border ${
+                    r.type === 'danger'
+                      ? 'border-red-800/40 bg-red-900/10'
+                      : r.type === 'warning'
+                      ? 'border-yellow-700/40 bg-yellow-900/10'
+                      : 'border-green-700/40 bg-green-900/10'
+                  }`}
+                >
+                  <div className={`font-semibold text-sm ${r.type === 'danger' ? 'text-red-400' : r.type === 'warning' ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {r.type === 'danger' ? '🔥' : r.type === 'warning' ? '⚠️' : '✅'} {r.title}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">{r.detail}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Best time + Safety */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <Clock className="w-4 h-4" />
+                Best Time to Spray
+              </div>
+              <div className="text-primary font-bold text-base leading-tight">
+                {weather.temp > 30 || weather.humidity < 40
+                  ? 'Early morning only (6–8 AM) — before heat builds up'
+                  : weather.rainProbability > 60
+                  ? 'Wait for rain to clear — check forecast'
+                  : 'Morning (7–10 AM) or Evening (4–6 PM)'}
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                Based on live data from {weather.city} — rain probability {weather.rainProbability}% · wind speed {(weather.windSpeed * 3.6).toFixed(1)} km/h · humidity {weather.humidity}%
               </div>
             </div>
 
-            {/* Recommendations */}
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <h3 className="font-semibold text-foreground text-sm mb-3">💡 {tr.recommendations}</h3>
-              <ul className="space-y-2">
-                {recommendations.map((r, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0" />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Best Time */}
-            <div className="rounded-2xl border border-border bg-card p-4 flex items-center gap-3">
-              <span className="text-2xl">⏰</span>
-              <div>
-                <p className="text-xs text-muted-foreground">{tr.bestTime}</p>
-                <p className="font-semibold text-foreground text-sm">{bestTime}</p>
+            <div className="bg-card border border-border rounded-xl p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                <ShieldCheck className="w-4 h-4" />
+                Safety Reminders
               </div>
-            </div>
-
-            {/* Safety Tips */}
-            <div className="rounded-2xl border border-border bg-card p-4">
-              <h3 className="font-semibold text-foreground text-sm mb-3">🛡️ {tr.safetyTips}</h3>
-              <ul className="space-y-2">
-                {[tr.tip1, tr.tip2, tr.tip3, tr.tip4].map((tip, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 mt-1.5 shrink-0" />
+              <ul className="space-y-1.5">
+                {[
+                  'Always wear protective gear — mask, gloves, goggles',
+                  'Calibrate sprayer nozzle before starting',
+                  'Spray in the direction of wind, never against it',
+                  'Check product label for minimum rain-free hours',
+                ].map((tip, i) => (
+                  <li key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                    <ChevronRight className="w-3 h-3 mt-0.5 text-primary shrink-0" />
                     {tip}
                   </li>
                 ))}
               </ul>
             </div>
+          </div>
 
-            {/* Retry */}
-            <button
-              onClick={fetchWeather}
-              className="w-full py-3 rounded-xl border border-border bg-card text-foreground font-medium text-sm hover:bg-secondary transition-colors"
-            >
-              🔄 {tr.retry}
-            </button>
-          </>
-        )}
-      </div>
+          {/* Spray Windows */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Today's Spray Windows</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-card border border-border rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground">Morning Window</div>
+                <div className="text-primary font-semibold mt-1">
+                  {weather.sunrise} – 10:00 AM
+                </div>
+                <div className={`text-xs mt-1 ${isSafe ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {isSafe ? '✓ Recommended' : '⚠ Check conditions'}
+                </div>
+              </div>
+              <div className="bg-card border border-border rounded-xl p-4 text-center">
+                <div className="text-sm text-muted-foreground">Evening Window</div>
+                <div className="text-primary font-semibold mt-1">
+                  4:00 PM – {weather.sunset}
+                </div>
+                <div className={`text-xs mt-1 ${isSafe ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {isSafe ? '✓ Suitable' : '⚠ Check conditions'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
+  )
 }

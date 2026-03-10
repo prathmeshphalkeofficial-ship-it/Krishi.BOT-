@@ -20,32 +20,41 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
+type NavLabel = { en: string; hi: string; mr: string }
+
+interface NavItem {
+  href: string
+  icon: React.ElementType
+  label: NavLabel
+  i18nKey?: string
+}
+
 // Desktop nav — all items
-const desktopNavItems = [
-  { key: "dashboard" as const, href: "/", icon: LayoutDashboard, label: null },
-  { key: "chatbot" as const, href: "/chat", icon: MessageSquare, label: null },
-  { key: "news" as const, href: "/news", icon: Newspaper, label: null },
-  { key: "voice" as const, href: "/voice", icon: Mic, label: null },
-  { href: "/spraying", icon: Sprout, label: { en: "Spraying", hi: "छिड़काव", mr: "फवारणी" } },
-  { href: "/disease", icon: Microscope, label: { en: "Disease", hi: "रोग पहचान", mr: "रोग ओळख" } },
-  { href: "/soil", icon: FlaskConical, label: { en: "Soil Health", hi: "मिट्टी स्वास्थ्य", mr: "माती आरोग्य" } },
-  { key: "settings" as const, href: "/settings", icon: Settings, label: null },
+const desktopNavItems: NavItem[] = [
+  { href: "/",         icon: LayoutDashboard, label: { en: "Dashboard", hi: "डैशबोर्ड",      mr: "डॅशबोर्ड"    }, i18nKey: "dashboard" },
+  { href: "/chat",     icon: MessageSquare,   label: { en: "Chat",      hi: "चैट",           mr: "चॅट"         }, i18nKey: "chatbot"   },
+  { href: "/news",     icon: Newspaper,       label: { en: "News",      hi: "समाचार",        mr: "बातम्या"     }, i18nKey: "news"      },
+  { href: "/voice",    icon: Mic,             label: { en: "Voice",     hi: "आवाज़",         mr: "आवाज"        }, i18nKey: "voice"     },
+  { href: "/spraying", icon: Sprout,          label: { en: "Spraying",  hi: "छिड़काव",       mr: "फवारणी"      } },
+  { href: "/disease",  icon: Microscope,      label: { en: "Disease",   hi: "रोग पहचान",    mr: "रोग ओळख"    } },
+  { href: "/soil",     icon: FlaskConical,    label: { en: "Soil Health",hi: "मिट्टी स्वास्थ्य", mr: "माती आरोग्य" } },
+  { href: "/settings", icon: Settings,        label: { en: "Settings",  hi: "सेटिंग",        mr: "सेटिंग"      }, i18nKey: "settings"  },
 ]
 
 // Mobile: 5 main tabs shown always
-const mobileMainTabs = [
-  { key: "dashboard" as const, href: "/", icon: LayoutDashboard, label: { en: "Home", hi: "होम", mr: "होम" } },
-  { key: "chatbot" as const, href: "/chat", icon: MessageSquare, label: { en: "Chat", hi: "चैट", mr: "चॅट" } },
-  { key: "news" as const, href: "/news", icon: Newspaper, label: { en: "News", hi: "समाचार", mr: "बातम्या" } },
-  { href: "/disease", icon: Microscope, label: { en: "Disease", hi: "रोग", mr: "रोग" } },
-  { href: "/soil", icon: FlaskConical, label: { en: "Soil", hi: "मिट्टी", mr: "माती" } },
+const mobileMainTabs: NavItem[] = [
+  { href: "/",        icon: LayoutDashboard, label: { en: "Home",    hi: "होम",    mr: "होम"    }, i18nKey: "dashboard" },
+  { href: "/chat",    icon: MessageSquare,   label: { en: "Chat",    hi: "चैट",    mr: "चॅट"   }, i18nKey: "chatbot"   },
+  { href: "/news",    icon: Newspaper,       label: { en: "News",    hi: "समाचार", mr: "बातम्या"}, i18nKey: "news"      },
+  { href: "/disease", icon: Microscope,      label: { en: "Disease", hi: "रोग",    mr: "रोग"   } },
+  { href: "/soil",    icon: FlaskConical,    label: { en: "Soil",    hi: "मिट्टी", mr: "माती"  } },
 ]
 
 // Mobile: items hidden in "More" menu
-const mobileMoreItems = [
-  { key: "voice" as const, href: "/voice", icon: Mic, label: { en: "Voice", hi: "आवाज़", mr: "आवाज" } },
-  { href: "/spraying", icon: Sprout, label: { en: "Spraying", hi: "छिड़काव", mr: "फवारणी" } },
-  { key: "settings" as const, href: "/settings", icon: Settings, label: { en: "Settings", hi: "सेटिंग", mr: "सेटिंग" } },
+const mobileMoreItems: NavItem[] = [
+  { href: "/voice",    icon: Mic,     label: { en: "Voice",    hi: "आवाज़",  mr: "आवाज"   }, i18nKey: "voice"    },
+  { href: "/spraying", icon: Sprout,  label: { en: "Spraying", hi: "छिड़काव", mr: "फवारणी" } },
+  { href: "/settings", icon: Settings,label: { en: "Settings", hi: "सेटिंग", mr: "सेटिंग" }, i18nKey: "settings" },
 ]
 
 export function Navbar() {
@@ -54,8 +63,8 @@ export function Navbar() {
   const { theme, setTheme } = useTheme()
   const [moreOpen, setMoreOpen] = useState(false)
 
-  const getLabel = (item: { key?: string; label: { en: string; hi: string; mr: string } | null }) => {
-    if (!item.label) return t(item.key as never, language)
+  const getLabel = (item: NavItem): string => {
+    if (item.i18nKey) return t(item.i18nKey as never, language)
     return item.label[language as "en" | "hi" | "mr"] || item.label.en
   }
 
@@ -80,9 +89,6 @@ export function Navbar() {
         <nav className="flex items-center gap-1 flex-1 flex-wrap">
           {desktopNavItems.map((item, i) => {
             const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-            const label = item.label
-              ? (item.label[language as "en" | "hi" | "mr"] || item.label.en)
-              : t(item.key as never, language)
             return (
               <Link
                 key={i}
@@ -95,7 +101,7 @@ export function Navbar() {
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {label}
+                {getLabel(item)}
               </Link>
             )
           })}
@@ -162,7 +168,6 @@ export function Navbar() {
               <div className="grid grid-cols-3 gap-2">
                 {mobileMoreItems.map((item, i) => {
                   const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-                  const label = item.label[language as "en" | "hi" | "mr"] || item.label.en
                   return (
                     <Link
                       key={i}
@@ -176,7 +181,7 @@ export function Navbar() {
                       )}
                     >
                       <item.icon className="h-5 w-5" />
-                      <span className="text-[10px] font-medium">{label}</span>
+                      <span className="text-[10px] font-medium">{getLabel(item)}</span>
                     </Link>
                   )
                 })}
@@ -189,7 +194,6 @@ export function Navbar() {
         <div className="flex items-center justify-around py-2 px-1">
           {mobileMainTabs.map((item, i) => {
             const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)
-            const label = item.label[language as "en" | "hi" | "mr"] || item.label.en
             return (
               <Link
                 key={i}
@@ -200,7 +204,7 @@ export function Navbar() {
                 )}
               >
                 <item.icon className={cn("h-5 w-5", isActive && "text-primary")} />
-                <span className="text-[9px] font-medium leading-tight text-center">{label}</span>
+                <span className="text-[9px] font-medium leading-tight text-center">{getLabel(item)}</span>
               </Link>
             )
           })}
