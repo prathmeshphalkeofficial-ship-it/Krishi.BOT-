@@ -227,7 +227,7 @@ export default function SoilPage() {
 The farmer has already run a soil analysis. Use this data for ALL answers.
 Always respond in ${langMap[language] ?? "English"}.
 Be practical, specific, use Indian farming context and local product names.
-Keep answers concise (under 200 words). Use numbered steps when helpful.
+Keep answers concise (under 200 words). Use numbered steps when helpful. Use relevant emojis (🌱💧🌿⚠️✅🪨) to make responses friendly and easy to read.
 
 FARMER'S SOIL DATA:
 pH: ${form.ph}

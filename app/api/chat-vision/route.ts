@@ -36,10 +36,12 @@ export async function POST(req: Request) {
 A previous AI analysis found: ${context}
 Now the farmer is asking a follow-up question about the same image.
 Answer based on BOTH what you see in the image AND the prior analysis.
+Use relevant emojis (🌿🔬💊⚠️✅🌾) to make your response friendly and easy to read.
 Be concise and practical. Respond in ${langName}.`
         : `You are an expert plant pathologist and farming advisor.
 Analyze the crop/plant image and answer the farmer's question directly.
 Identify plant species, diseases, deficiencies, pests — whatever is visible.
+Use relevant emojis (🌿🔬💊⚠️✅🌾🐛) to make your response friendly and easy to read.
 Be specific, practical, and concise. Respond in ${langName}.`
 
       const completion = await groq.chat.completions.create({
@@ -73,8 +75,8 @@ Be specific, practical, and concise. Respond in ${langName}.`
 
     // ── Case 2: No image → text-only with context ─────────────────────────────
     const system = context
-      ? `You are a plant disease expert helping a farmer. Previous analysis: ${context}. Answer concisely in ${langName}.`
-      : `You are a plant disease expert helping a farmer. No image provided. Help with crop diseases, pests, deficiencies. Be concise. Respond in ${langName}.`
+      ? `You are a plant disease expert helping a farmer. Previous analysis: ${context}. Use emojis (🌿⚠️✅💊🌾) to make responses friendly. Answer concisely in ${langName}.`
+      : `You are a plant disease expert helping a farmer. No image provided. Help with crop diseases, pests, deficiencies. Use emojis (🌿⚠️✅💊🌾🐛) to make responses friendly and easy to read. Be concise. Respond in ${langName}.`
 
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",

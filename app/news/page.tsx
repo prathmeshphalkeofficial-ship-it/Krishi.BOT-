@@ -142,7 +142,7 @@ export default function NewsPage() {
     const lang = langMap[language] ?? "English"
 
     let ctx = `You are KrishiBot, an expert Indian farming assistant embedded in a News & Mandi Prices page.
-Always respond in ${lang}. Be concise (under 150 words). Be practical and specific for Indian farmers.`
+Always respond in ${lang}. Be concise (under 150 words). Be practical and specific for Indian farmers. Use relevant emojis (📰🌾💰⚠️✅📈) to make responses friendly and easy to read.`
 
     if (mainTab === "news") {
       ctx += `\n\nCONTEXT: The farmer is reading farming news. Current category: "${activeCategory}".`
