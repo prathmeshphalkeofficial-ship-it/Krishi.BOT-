@@ -75,7 +75,7 @@ export function Navbar() {
       {/* ── Desktop Navbar ── */}
       <header className="hidden md:flex sticky top-0 z-50 h-16 items-center border-b border-border bg-card/80 backdrop-blur-md px-6">
         <Link href="/" className="flex items-center gap-2.5 mr-8 flex-shrink-0">
-          <div className="relative h-9 w-9 flex-shrink-0">
+          <div className="relative h-9 w-9 flex-shrink-0" style={{filter:"drop-shadow(0 0 6px rgba(34,197,94,0.5))"}} >
             <Image
               src="/krishibot-logo.png"
               alt="KrishiBot Logo"
