@@ -99,7 +99,19 @@ export function VoiceAssistant() {
   const [navMessage, setNavMessage] = useState<string | null>(null)
   const [speakingId, setSpeakingId] = useState<string | null>(null)
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  // ── Get GPS coords (cached) ────────────────────────────────────────────────
+  const coordsRef = useRef<{ lat: number; lon: number } | null>(null)
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { coordsRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude } },
+        () => { /* silently fail — route uses Pune default */ }
+      )
+    }
+  }, [])
+
+
   const wakeRecognitionRef = useRef<SpeechRecognition | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -167,7 +179,7 @@ export function VoiceAssistant() {
       const res = await fetch("/api/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: text, language }),
+        body: JSON.stringify({ prompt: text, language, ...coordsRef.current }),
         signal: abortRef.current.signal,
       })
       if (!res.ok) throw new Error(`API error: ${res.status}`)
