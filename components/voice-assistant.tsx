@@ -112,6 +112,7 @@ export function VoiceAssistant() {
   }, [])
 
 
+  const recognitionRef = useRef<SpeechRecognition | null>(null)
   const wakeRecognitionRef = useRef<SpeechRecognition | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
