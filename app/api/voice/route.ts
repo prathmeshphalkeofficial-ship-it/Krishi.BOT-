@@ -79,8 +79,54 @@ async function getFarmingNews(language: Language): Promise<string | null> {
   } catch { return null }
 }
 
+// ── Live mandi prices (calls your existing /api/mandi) ───────────────────────
+const MANDI_KEYWORDS: Record<string, string> = {
+  onion: "Onion", tomato: "Tomato", potato: "Potato", wheat: "Wheat",
+  rice: "Rice", maize: "Maize", soybean: "Soybean", cotton: "Cotton",
+  garlic: "Garlic", ginger: "Ginger", bhindi: "Bhindi", okra: "Bhindi",
+  brinjal: "Brinjal", cauliflower: "Cauliflower", cabbage: "Cabbage",
+  banana: "Banana", mango: "Mango", grapes: "Grapes",
+  "प्याज": "Onion", "टमाटर": "Tomato", "आलू": "Potato", "गेहूं": "Wheat",
+  "चावल": "Rice", "मक्का": "Maize", "सोयाबीन": "Soybean", "कपास": "Cotton",
+  "लहसुन": "Garlic", "अदरक": "Ginger", "भिंडी": "Bhindi", "बैंगन": "Brinjal",
+  "कांदा": "Onion", "टोमॅटो": "Tomato", "बटाटा": "Potato", "गहू": "Wheat",
+  "तांदूळ": "Rice", "मका": "Maize", "लसूण": "Garlic", "आले": "Ginger",
+  "भेंडी": "Bhindi", "वांगी": "Brinjal", "कापूस": "Cotton",
+}
+
+async function getLiveMandi(prompt: string): Promise<string | null> {
+  try {
+    const lower = prompt.toLowerCase()
+    let commodity = ""
+    for (const [keyword, name] of Object.entries(MANDI_KEYWORDS)) {
+      if (lower.includes(keyword.toLowerCase())) { commodity = name; break }
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://krishi-bot.vercel.app"
+    const res = await fetch(`${baseUrl}/api/mandi`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ district: "Pune" }),
+      signal: AbortSignal.timeout(6000),
+    })
+    const data = await res.json()
+    if (!Array.isArray(data) || data.length === 0) return null
+    if (commodity) {
+      const match = data.find((item: any) =>
+        item.commodity?.toLowerCase().includes(commodity.toLowerCase())
+      )
+      if (match) {
+        return `LIVE MANDI DATA: ${match.commodity} price in ${match.market ?? "Pune"}: ₹${match.price} per ${match.unit ?? "quintal"}. This is today's actual market rate.`
+      }
+    }
+    const top = data.slice(0, 5).map((item: any) =>
+      `${item.commodity}: ₹${item.price}/${item.unit ?? "q"}`
+    ).join(", ")
+    return `LIVE MANDI DATA today (Pune): ${top}`
+  } catch { return null }
+}
+
 // ── Intent detection ──────────────────────────────────────────────────────────
-function detectIntent(text: string): "weather" | "forecast" | "news" | "general" {
+function detectIntent(text: string): "weather" | "forecast" | "news" | "mandi" | "general" {
   const lower = text.toLowerCase()
   if (["forecast", "tomorrow", "next few days", "कल", "उद्या", "पुढील दिवस"].some(w => lower.includes(w)))
     return "forecast"
@@ -88,6 +134,10 @@ function detectIntent(text: string): "weather" | "forecast" | "news" | "general"
     return "weather"
   if (["news", "खबर", "बातम्या", "headline", "latest news", "today's news"].some(w => lower.includes(w)))
     return "news"
+  if (["mandi", "price", "rate", "market", "bhav", "भाव", "मंडी", "बाजार", "किंमत",
+    "दर", "भाव", "दाम", "bazaar"].some(w => lower.includes(w)) ||
+    Object.keys(MANDI_KEYWORDS).some(k => lower.includes(k.toLowerCase())))
+    return "mandi"
   return "general"
 }
 
@@ -148,6 +198,9 @@ export async function POST(req: Request) {
     } else if (intent === "news") {
       const news = await getFarmingNews(language)
       if (news) liveContext = `\n\nLIVE NEWS DATA (use this to answer): ${news}`
+    } else if (intent === "mandi") {
+      const mandi = await getLiveMandi(prompt)
+      if (mandi) liveContext = `\n\n${mandi}\nIMPORTANT: Use ONLY the above live mandi data to answer. Do NOT guess or make up prices.`
     }
 
     // Step 3 — Groq AI with live data injected into system prompt
