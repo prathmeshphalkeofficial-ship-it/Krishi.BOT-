@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from 'next-themes'
 import { AppProvider } from '@/lib/app-context'
 import { Navbar } from '@/components/navbar'
+import { SplashScreen } from '@/components/splash-screen'
 import './globals.css'
 
 const _inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -14,18 +15,9 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-      {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
-      },
+      { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },
+      { url: '/icon-dark-32x32.png',  media: '(prefers-color-scheme: dark)'  },
+      { url: '/icon.svg', type: 'image/svg+xml' },
     ],
     apple: '/apple-icon.png',
   },
@@ -34,7 +26,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#2e7d32' },
-    { media: '(prefers-color-scheme: dark)', color: '#1b5e20' },
+    { media: '(prefers-color-scheme: dark)',  color: '#1b5e20' },
   ],
   maximumScale: 1,
 }
@@ -49,6 +41,7 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AppProvider>
+            <SplashScreen />
             <div className="flex min-h-screen flex-col bg-background">
               <Navbar />
               {children}

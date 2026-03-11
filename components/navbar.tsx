@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import Image from "next/image"
 import {
-  LayoutDashboard, MessageSquare, Mic, Settings, Leaf,
+  LayoutDashboard, MessageSquare, Mic, Settings,
   Globe, Moon, Sun, Newspaper, Sprout, Microscope,
   FlaskConical, MoreHorizontal, X
 } from "lucide-react"
@@ -29,32 +30,29 @@ interface NavItem {
   i18nKey?: string
 }
 
-// Desktop nav — all items
 const desktopNavItems: NavItem[] = [
-  { href: "/",         icon: LayoutDashboard, label: { en: "Dashboard", hi: "डैशबोर्ड",      mr: "डॅशबोर्ड"    }, i18nKey: "dashboard" },
-  { href: "/chat",     icon: MessageSquare,   label: { en: "Chat",      hi: "चैट",           mr: "चॅट"         }, i18nKey: "chatbot"   },
-  { href: "/news",     icon: Newspaper,       label: { en: "News",      hi: "समाचार",        mr: "बातम्या"     }, i18nKey: "news"      },
-  { href: "/voice",    icon: Mic,             label: { en: "Voice",     hi: "आवाज़",         mr: "आवाज"        }, i18nKey: "voice"     },
-  { href: "/spraying", icon: Sprout,          label: { en: "Spraying",  hi: "छिड़काव",       mr: "फवारणी"      } },
-  { href: "/disease",  icon: Microscope,      label: { en: "Disease",   hi: "रोग पहचान",    mr: "रोग ओळख"    } },
-  { href: "/soil",     icon: FlaskConical,    label: { en: "Soil Health",hi: "मिट्टी स्वास्थ्य", mr: "माती आरोग्य" } },
-  { href: "/settings", icon: Settings,        label: { en: "Settings",  hi: "सेटिंग",        mr: "सेटिंग"      }, i18nKey: "settings"  },
+  { href: "/",         icon: LayoutDashboard, label: { en: "Dashboard",  hi: "डैशबोर्ड",          mr: "डॅशबोर्ड"       }, i18nKey: "dashboard" },
+  { href: "/chat",     icon: MessageSquare,   label: { en: "Chat",       hi: "चैट",               mr: "चॅट"            }, i18nKey: "chatbot"   },
+  { href: "/news",     icon: Newspaper,       label: { en: "News",       hi: "समाचार",            mr: "बातम्या"        }, i18nKey: "news"      },
+  { href: "/voice",    icon: Mic,             label: { en: "Voice",      hi: "आवाज़",             mr: "आवाज"           }, i18nKey: "voice"     },
+  { href: "/spraying", icon: Sprout,          label: { en: "Spraying",   hi: "छिड़काव",           mr: "फवारणी"         } },
+  { href: "/disease",  icon: Microscope,      label: { en: "Disease",    hi: "रोग पहचान",        mr: "रोग ओळख"        } },
+  { href: "/soil",     icon: FlaskConical,    label: { en: "Soil Health",hi: "मिट्टी स्वास्थ्य", mr: "माती आरोग्य"    } },
+  { href: "/settings", icon: Settings,        label: { en: "Settings",   hi: "सेटिंग",            mr: "सेटिंग"         }, i18nKey: "settings"  },
 ]
 
-// Mobile: 5 main tabs shown always
 const mobileMainTabs: NavItem[] = [
-  { href: "/",        icon: LayoutDashboard, label: { en: "Home",    hi: "होम",    mr: "होम"    }, i18nKey: "dashboard" },
-  { href: "/chat",    icon: MessageSquare,   label: { en: "Chat",    hi: "चैट",    mr: "चॅट"   }, i18nKey: "chatbot"   },
-  { href: "/news",    icon: Newspaper,       label: { en: "News",    hi: "समाचार", mr: "बातम्या"}, i18nKey: "news"      },
-  { href: "/disease", icon: Microscope,      label: { en: "Disease", hi: "रोग",    mr: "रोग"   } },
-  { href: "/soil",    icon: FlaskConical,    label: { en: "Soil",    hi: "मिट्टी", mr: "माती"  } },
+  { href: "/",        icon: LayoutDashboard, label: { en: "Home",    hi: "होम",    mr: "होम"     }, i18nKey: "dashboard" },
+  { href: "/chat",    icon: MessageSquare,   label: { en: "Chat",    hi: "चैट",    mr: "चॅट"    }, i18nKey: "chatbot"   },
+  { href: "/news",    icon: Newspaper,       label: { en: "News",    hi: "समाचार", mr: "बातम्या" }, i18nKey: "news"      },
+  { href: "/disease", icon: Microscope,      label: { en: "Disease", hi: "रोग",    mr: "रोग"    } },
+  { href: "/soil",    icon: FlaskConical,    label: { en: "Soil",    hi: "मिट्टी", mr: "माती"   } },
 ]
 
-// Mobile: items hidden in "More" menu
 const mobileMoreItems: NavItem[] = [
-  { href: "/voice",    icon: Mic,     label: { en: "Voice",    hi: "आवाज़",  mr: "आवाज"   }, i18nKey: "voice"    },
-  { href: "/spraying", icon: Sprout,  label: { en: "Spraying", hi: "छिड़काव", mr: "फवारणी" } },
-  { href: "/settings", icon: Settings,label: { en: "Settings", hi: "सेटिंग", mr: "सेटिंग" }, i18nKey: "settings" },
+  { href: "/voice",    icon: Mic,      label: { en: "Voice",    hi: "आवाज़",  mr: "आवाज"   }, i18nKey: "voice"    },
+  { href: "/spraying", icon: Sprout,   label: { en: "Spraying", hi: "छिड़काव", mr: "फवारणी" } },
+  { href: "/settings", icon: Settings, label: { en: "Settings", hi: "सेटिंग", mr: "सेटिंग" }, i18nKey: "settings" },
 ]
 
 export function Navbar() {
@@ -74,11 +72,17 @@ export function Navbar() {
 
   return (
     <>
-      {/* Desktop Navbar */}
+      {/* ── Desktop Navbar ── */}
       <header className="hidden md:flex sticky top-0 z-50 h-16 items-center border-b border-border bg-card/80 backdrop-blur-md px-6">
-        <Link href="/" className="flex items-center gap-2.5 mr-8">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-            <Leaf className="h-5 w-5 text-primary-foreground" />
+        <Link href="/" className="flex items-center gap-2.5 mr-8 flex-shrink-0">
+          <div className="relative h-9 w-9 flex-shrink-0">
+            <Image
+              src="/krishibot-logo.png"
+              alt="KrishiBot Logo"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
           <div className="flex flex-col">
             <span className="text-sm font-bold leading-tight text-foreground">{t("appName", language)}</span>
@@ -141,27 +145,19 @@ export function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation */}
+      {/* ── Mobile Bottom Navigation ── */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md">
 
-        {/* More drawer — slides up */}
+        {/* More drawer */}
         {moreOpen && (
           <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-              onClick={() => setMoreOpen(false)}
-            />
-            {/* Drawer */}
+            <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setMoreOpen(false)} />
             <div className="absolute bottom-full left-0 right-0 z-50 bg-card border-t border-border rounded-t-2xl p-4 shadow-2xl">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-foreground">
                   {language === "hi" ? "और विकल्प" : language === "mr" ? "आणखी पर्याय" : "More Options"}
                 </span>
-                <button
-                  onClick={() => setMoreOpen(false)}
-                  className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center"
-                >
+                <button onClick={() => setMoreOpen(false)} className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center">
                   <X className="h-4 w-4 text-muted-foreground" />
                 </button>
               </div>
@@ -209,7 +205,6 @@ export function Navbar() {
             )
           })}
 
-          {/* More button */}
           <button
             onClick={() => setMoreOpen(!moreOpen)}
             className={cn(
