@@ -247,15 +247,16 @@ Prevention: ${result.prevention?.join("; ") || "—"}
 
     try {
       const ctx = buildContext();
-      const langName = language === "hi" ? "Hindi" : language === "mr" ? "Marathi" : "English";
-      const system = ctx
-        ? `You are a plant disease expert helping a farmer. The AI already analyzed their crop image:\n\n${ctx}\n\nAnswer based on this. Be concise and practical. Respond in ${langName}.`
-        : `You are a plant disease expert helping a farmer. No image analyzed yet. Help with crop diseases, pests, deficiencies. Be concise. Respond in ${langName}.`;
-
-      const res = await fetch("/api/chat", {
+      // Use vision API whenever image is available (with or without analysis result)
+      const res = await fetch("/api/chat-vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: `${system}\n\nFarmer asks: ${message}` }),
+        body: JSON.stringify({
+          message,
+          imageBase64: image ?? "",   // base64 data:image/... string
+          language,
+          context: ctx,               // existing analysis result if any
+        }),
       });
       const data = await res.json();
       setChatMessages((prev) => [...prev, { role: "assistant", content: data.text ?? t.error }]);
@@ -352,15 +353,15 @@ Prevention: ${result.prevention?.join("; ") || "—"}
 
     try {
       const ctx = buildContext();
-      const langName = language === "hi" ? "Hindi" : language === "mr" ? "Marathi" : "English";
-      const system = ctx
-        ? `You are a plant disease expert helping a farmer. The AI already analyzed their crop image:\n\n${ctx}\n\nAnswer based on this. Be concise and practical. Respond in ${langName}.`
-        : `You are a plant disease expert helping a farmer. No image analyzed yet. Help with crop diseases, pests, deficiencies. Be concise. Respond in ${langName}.`;
-
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/chat-vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: `${system}\n\nFarmer asks: ${message}` }),
+        body: JSON.stringify({
+          message,
+          imageBase64: image ?? "",
+          language,
+          context: ctx,
+        }),
       });
       const data = await res.json();
       setChatMessages((prev) => [...prev, { role: "assistant", content: data.text ?? t.error }]);
