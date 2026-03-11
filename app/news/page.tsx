@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import Link from "next/link"
 import {
   Newspaper, RefreshCw, ExternalLink, Clock, TrendingUp,
   Leaf, CloudRain, Bug, Wheat, AlertCircle, ArrowLeft,
-  Globe, ShoppingBasket, TrendingDown, Minus, Search, MapPin
+  Globe, ShoppingBasket, TrendingDown, Minus, Search, MapPin,
+  MessageCircle, X, Send,
 } from "lucide-react"
 import { useApp } from "@/lib/app-context"
 import { cn } from "@/lib/utils"
@@ -61,6 +62,24 @@ const commodityCategories = [
   { key: "crop",      label: { en: "Crops",      hi: "फसलें",     mr: "पिके"   }, keywords: ["Wheat","Rice","Soybean","Cotton","Maize","Jowar","Bajra","Tur","Gram","Moong","Urad","Groundnut","Sunflower"] },
 ]
 
+// ── Chat suggestions by tab ───────────────────────────────────────────────────
+const CHAT_SUGGESTIONS: Record<string, Record<string, string[]>> = {
+  news: {
+    en: ["Summarize today's farming news", "What's affecting crop prices?", "Any pest alerts this season?", "Government schemes for farmers?"],
+    hi: ["आज की कृषि खबरें बताओ", "फसल भाव को क्या प्रभावित कर रहा है?", "इस मौसम में कीट का खतरा?", "किसानों के लिए सरकारी योजनाएं?"],
+    mr: ["आजच्या कृषी बातम्या सांगा", "पीक भावावर काय परिणाम होतोय?", "या हंगामात कीड धोका?", "शेतकऱ्यांसाठी सरकारी योजना?"],
+  },
+  mandi: {
+    en: ["Which crop is giving best price now?", "Should I sell onion today?", "When do tomato prices rise?", "Best time to sell wheat?"],
+    hi: ["अभी कौन सी फसल का भाव सबसे अच्छा है?", "क्या आज प्याज बेचूं?", "टमाटर का भाव कब बढ़ता है?", "गेहूं बेचने का सही समय?"],
+    mr: ["आत्ता कोणत्या पिकाचा भाव सर्वोत्तम आहे?", "आज कांदा विकावा का?", "टोमॅटोचा भाव कधी वाढतो?", "गहू विकण्याची योग्य वेळ?"],
+  },
+}
+
+function cleanForSpeech(text: string): string {
+  return text.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").replace(/[*#_~`>|→•]/g, "").replace(/\n+/g, ". ").trim()
+}
+
 export default function NewsPage() {
   const { language } = useApp()
   const [mainTab, setMainTab] = useState<"news" | "mandi">("news")
@@ -84,6 +103,25 @@ export default function NewsPage() {
   const [mandiSource, setMandiSource] = useState("")
   const [mandiSourceUrl, setMandiSourceUrl] = useState("https://vegetablemarketprice.com/market/maharashtra/today")
 
+  // ── Chat state ─────────────────────────────────────────────────────────────
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([])
+  const [chatInput, setChatInput] = useState("")
+  const [chatLoading, setChatLoading] = useState(false)
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null)
+  const [isListening, setIsListening] = useState(false)
+  const chatBottomRef = useRef<HTMLDivElement>(null)
+  const recognitionRef = useRef<any>(null)
+
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [chatMessages, chatLoading])
+
+  // ── Reset chat messages when tab changes ──────────────────────────────────
+  useEffect(() => {
+    setChatMessages([])
+  }, [mainTab])
+
   const t = useCallback((en: string, hi: string, mr: string) => {
     if (language === "hi") return hi
     if (language === "mr") return mr
@@ -98,7 +136,101 @@ export default function NewsPage() {
     return "en"
   }, [language])
 
-  // Fetch news
+  // ── Build context-aware system prompt ─────────────────────────────────────
+  const buildSystemPrompt = useCallback(() => {
+    const langMap: Record<string, string> = { en: "English", hi: "Hindi", mr: "Marathi" }
+    const lang = langMap[language] ?? "English"
+
+    let ctx = `You are KrishiBot, an expert Indian farming assistant embedded in a News & Mandi Prices page.
+Always respond in ${lang}. Be concise (under 150 words). Be practical and specific for Indian farmers.`
+
+    if (mainTab === "news") {
+      ctx += `\n\nCONTEXT: The farmer is reading farming news. Current category: "${activeCategory}".`
+      if (news.length > 0) {
+        const headlines = news.slice(0, 5).map((n, i) => `${i + 1}. ${n.title}`).join("\n")
+        ctx += `\n\nCURRENT NEWS HEADLINES:\n${headlines}\n\nUse these headlines to answer questions about today's news.`
+      }
+      if (selectedArticle) {
+        ctx += `\n\nFARMER IS READING THIS ARTICLE:\nTitle: ${selectedArticle.title}\nDescription: ${selectedArticle.description ?? ""}`
+      }
+    } else {
+      ctx += `\n\nCONTEXT: The farmer is viewing mandi prices for ${selectedDistrict} district.`
+      if (mandiData.length > 0) {
+        const top = mandiData.slice(0, 10).map(m =>
+          `${m.commodity}: ₹${(parseInt(m.modal_price)/100).toFixed(1)}/kg (min ₹${(parseInt(m.min_price)/100).toFixed(1)}, max ₹${(parseInt(m.max_price)/100).toFixed(1)})`
+        ).join("\n")
+        ctx += `\n\nLIVE MANDI PRICES (${selectedDistrict}):\n${top}\n\nUse these REAL prices to answer questions. Do NOT make up prices.`
+      }
+    }
+    return ctx
+  }, [language, mainTab, activeCategory, news, selectedArticle, selectedDistrict, mandiData])
+
+  // ── TTS ───────────────────────────────────────────────────────────────────
+  function speakMessage(text: string, index: number) {
+    if (!window.speechSynthesis) return
+    window.speechSynthesis.cancel()
+    if (speakingIndex === index) { setSpeakingIndex(null); return }
+    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text))
+    utterance.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN"
+    utterance.rate = 0.95
+    utterance.onstart = () => setSpeakingIndex(index)
+    utterance.onend = () => setSpeakingIndex(null)
+    utterance.onerror = () => setSpeakingIndex(null)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  // ── Voice input ───────────────────────────────────────────────────────────
+  function toggleVoiceInput() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR) { alert("Voice input not supported. Use Chrome."); return }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return }
+    const recognition = new SR()
+    recognitionRef.current = recognition
+    recognition.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN"
+    recognition.interimResults = false
+    recognition.onstart = () => setIsListening(true)
+    recognition.onend = () => setIsListening(false)
+    recognition.onerror = () => setIsListening(false)
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      setChatInput("")
+      sendChatWithText(transcript)
+    }
+    recognition.start()
+  }
+
+  // ── Send chat ─────────────────────────────────────────────────────────────
+  const sendChatWithText = async (text: string) => {
+    if (!text.trim() || chatLoading) return
+    setChatMessages(prev => [...prev, { role: "user", text }])
+    setChatLoading(true)
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: buildSystemPrompt() + "\n\nFarmer question: " + text,
+          language,
+        }),
+      })
+      const data = await res.json()
+      const reply = data.text ?? data.reply ?? data.message ?? "No response."
+      setChatMessages(prev => [...prev, { role: "assistant", text: reply }])
+    } catch {
+      setChatMessages(prev => [...prev, { role: "assistant", text: "Something went wrong. Try again." }])
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  const sendChat = async (overrideText?: string) => {
+    const text = (overrideText ?? chatInput).trim()
+    if (!text || chatLoading) return
+    setChatInput("")
+    await sendChatWithText(text)
+  }
+
+  // ── Fetch news ────────────────────────────────────────────────────────────
   const fetchNews = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setNewsRefreshing(true)
     else setNewsLoading(true)
@@ -133,7 +265,7 @@ export default function NewsPage() {
     if (mainTab === "news") fetchNews()
   }, [fetchNews, mainTab])
 
-  // Fetch mandi
+  // ── Fetch mandi ───────────────────────────────────────────────────────────
   const fetchMandi = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setMandiRefreshing(true)
     else setMandiLoading(true)
@@ -187,7 +319,194 @@ export default function NewsPage() {
     return cat.keywords.some(k => item.commodity.toLowerCase().includes(k.toLowerCase()))
   })
 
-  // Article reader view
+  const suggestions = CHAT_SUGGESTIONS[mainTab]?.[language] ?? CHAT_SUGGESTIONS[mainTab]?.en ?? []
+
+  // ── Chat popup JSX ────────────────────────────────────────────────────────
+  const chatPopup = (
+    <>
+      {/* Floating button */}
+      <button
+        onClick={() => setChatOpen(o => !o)}
+        className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center transition-all active:scale-95"
+        aria-label="Open chat"
+      >
+        {chatOpen
+          ? <X className="w-6 h-6 text-primary-foreground" />
+          : <MessageCircle className="w-6 h-6 text-primary-foreground" />
+        }
+        {/* Dot when news is loaded and chat not opened yet */}
+        {!chatOpen && (news.length > 0 || mandiData.length > 0) && chatMessages.length === 0 && (
+          <span className="absolute top-1 right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-background animate-pulse" />
+        )}
+      </button>
+
+      {/* Chat popup */}
+      {chatOpen && (
+        <div
+          className="fixed bottom-36 right-4 z-50 flex flex-col bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+          style={{ width: "320px", maxWidth: "calc(100vw - 2rem)", height: "460px" }}
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-secondary flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+              {mainTab === "news" ? <Newspaper className="w-4 h-4 text-primary" /> : <ShoppingBasket className="w-4 h-4 text-primary" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-primary leading-tight">
+                {mainTab === "news"
+                  ? t("Ask about the news", "समाचार के बारे में पूछें", "बातम्यांबद्दल विचारा")
+                  : t("Ask about mandi prices", "मंडी भाव के बारे में पूछें", "मंडी भावाबद्दल विचारा")}
+              </p>
+              <p className="text-xs text-muted-foreground truncate">
+                {t("KrishiBot AI · Real data", "KrishiBot AI · रियल डेटा", "KrishiBot AI · खरा डेटा")}
+              </p>
+            </div>
+            <button onClick={() => setChatOpen(false)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-border transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Context pills */}
+          <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
+            {mainTab === "news" ? (
+              <>
+                <span className="text-xs bg-primary/15 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
+                  📰 {activeCategory}
+                </span>
+                {news.length > 0 && (
+                  <span className="text-xs bg-green-500/15 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full">
+                    ✅ {news.length} articles loaded
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-xs bg-primary/15 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
+                  📍 {selectedDistrict}
+                </span>
+                {mandiData.length > 0 && (
+                  <span className="text-xs bg-green-500/15 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full">
+                    ✅ {mandiData.length} prices loaded
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
+            {chatMessages.length === 0 && (
+              <div className="space-y-2">
+                <div className="bg-secondary border border-border rounded-2xl rounded-bl-sm px-3 py-2.5 text-xs text-foreground leading-relaxed">
+                  {mainTab === "news"
+                    ? (news.length > 0
+                        ? t(`I've loaded ${news.length} farming news articles. Ask me anything!`,
+                            `मैंने ${news.length} कृषि समाचार लोड किए हैं। कुछ भी पूछें!`,
+                            `मी ${news.length} कृषी बातम्या लोड केल्या आहेत. काहीही विचारा!`)
+                        : t("Load some news first, then ask me about it!",
+                            "पहले समाचार लोड करें, फिर पूछें!",
+                            "आधी बातम्या लोड करा, मग विचारा!"))
+                    : (mandiData.length > 0
+                        ? t(`I have live mandi prices for ${selectedDistrict}. Ask me about any crop price!`,
+                            `मेरे पास ${selectedDistrict} के लाइव मंडी भाव हैं। किसी भी फसल का भाव पूछें!`,
+                            `माझ्याकडे ${selectedDistrict} चे लाइव्ह मंडी भाव आहेत. कोणत्याही पिकाचा भाव विचारा!`)
+                        : t("Load mandi data first, then ask me!",
+                            "पहले मंडी डेटा लोड करें, फिर पूछें!",
+                            "आधी मंडी डेटा लोड करा, मग विचारा!"))}
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 pt-1">
+                  {suggestions.map((s, i) => (
+                    <button key={i} onClick={() => sendChat(s)} disabled={chatLoading}
+                      className="text-left text-xs bg-secondary border border-border rounded-xl px-3 py-2 text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {chatMessages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[88%] flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
+                  <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words ${
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-sm"
+                      : "bg-secondary border border-border text-foreground rounded-bl-sm"
+                  }`}>
+                    {m.role === "assistant" && (
+                      <div className="flex items-center gap-1 text-[10px] text-primary mb-1 font-medium">
+                        <Leaf className="w-3 h-3" /> KrishiBot
+                      </div>
+                    )}
+                    {m.text}
+                  </div>
+                  {m.role === "assistant" && (
+                    <button onClick={() => speakMessage(m.text, i)}
+                      className={cn(
+                        "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all",
+                        speakingIndex === i
+                          ? "bg-primary/20 text-primary border-primary/40 animate-pulse"
+                          : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                      )}>
+                      {speakingIndex === i ? "⏹ Stop" : "🔊 Listen"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {chatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-secondary border border-border rounded-2xl rounded-bl-sm px-4 py-3">
+                  <div className="flex gap-1 items-center h-3">
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={chatBottomRef} />
+          </div>
+
+          {/* Input row */}
+          <div className="flex gap-2 px-3 py-3 border-t border-border flex-shrink-0 bg-card">
+            {/* Mic button */}
+            <button onClick={toggleVoiceInput}
+              className={cn(
+                "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm border transition-all",
+                isListening
+                  ? "bg-red-500 text-white border-red-500 animate-pulse"
+                  : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+              )}
+              title={isListening ? "Stop" : "Speak"}>
+              {isListening ? "⏹" : "🎤"}
+            </button>
+            <input
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat() } }}
+              placeholder={isListening
+                ? t("Listening...", "सुन रहा हूं...", "ऐकतोय...")
+                : t("Ask about news or prices...", "समाचार या भाव पूछें...", "बातम्या किंवा भाव विचारा...")}
+              disabled={chatLoading}
+              className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 disabled:opacity-60"
+            />
+            <button onClick={() => sendChat()} disabled={!chatInput.trim() || chatLoading}
+              className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 disabled:opacity-40 transition-opacity">
+              {chatLoading
+                ? <span className="w-3.5 h-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                : <Send className="w-4 h-4 text-primary-foreground" />
+              }
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  // ── Article reader view ───────────────────────────────────────────────────
   if (selectedArticle) {
     return (
       <div className="flex flex-col min-h-screen pb-20 md:pb-6">
@@ -239,6 +558,8 @@ export default function NewsPage() {
             </div>
           )}
         </div>
+        {/* Chat available in article view too */}
+        {chatPopup}
       </div>
     )
   }
@@ -336,13 +657,9 @@ export default function NewsPage() {
               </div>
               <div className="flex items-center gap-1 bg-secondary rounded-lg px-2 py-1 flex-1 min-w-[80px]">
                 <Search className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                   placeholder={t("Search...","खोजें...","शोधा...")}
-                  className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground"
-                />
+                  className="bg-transparent text-xs outline-none w-full text-foreground placeholder:text-muted-foreground" />
               </div>
             </div>
           </div>
@@ -427,15 +744,10 @@ export default function NewsPage() {
 
           {!mandiLoading && !mandiError && (
             <>
-              {/* Stats row */}
               <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-muted-foreground">
-                  {filteredMandi.length} {t("commodities","वस्तुएं","वस्तू")} · {selectedDistrict}
-                </p>
+                <p className="text-xs text-muted-foreground">{filteredMandi.length} {t("commodities","वस्तुएं","वस्तू")} · {selectedDistrict}</p>
                 <p className="text-[10px] text-muted-foreground">{t("₹/Quintal","₹/क्विंटल","₹/क्विंटल")}</p>
               </div>
-
-              {/* Live badge */}
               {mandiSource !== "mock" && (
                 <div className="flex items-center gap-1.5 mb-3 px-2 py-1 bg-green-500/10 rounded-lg w-fit">
                   <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
@@ -444,24 +756,17 @@ export default function NewsPage() {
                   </span>
                 </div>
               )}
-
-              {/* ── 📈 History Chart Button ── */}
-              <Link
-                href="/mandi/history"
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 mb-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors"
-              >
+              <Link href="/mandi/history"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 mb-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors">
                 <TrendingUp className="h-4 w-4 text-primary" />
                 <span className="text-xs font-semibold text-primary">
                   {t("📈 View 30-Day Price History Charts","📈 30 दिन का मूल्य इतिहास देखें","📈 ३० दिवसांचा किंमत इतिहास पाहा")}
                 </span>
               </Link>
-
               {filteredMandi.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 gap-3">
                   <ShoppingBasket className="h-8 w-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {t("No data found","कोई डेटा नहीं मिला","कोणताही डेटा सापडला नाही")}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t("No data found","कोई डेटा नहीं मिला","कोणताही डेटा सापडला नाही")}</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -511,15 +816,10 @@ export default function NewsPage() {
             </>
           )}
 
-          {/* Source link */}
           {!mandiLoading && !mandiError && (
             <div className="mt-4 pt-3 border-t border-border">
-              <a
-                href={mandiSourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors"
-              >
+              <a href={mandiSourceUrl} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl transition-colors">
                 <span className="text-lg">🌾</span>
                 <span className="text-xs font-semibold text-primary">
                   {t("View Full Prices on VegetableMarketPrice.com →","VegetableMarketPrice.com पर पूरे भाव देखें →","VegetableMarketPrice.com वर संपूर्ण भाव पाहा →")}
@@ -533,6 +833,10 @@ export default function NewsPage() {
           )}
         </div>
       )}
+
+      {/* ── Floating Chat ── */}
+      {chatPopup}
+
     </div>
   )
 }
