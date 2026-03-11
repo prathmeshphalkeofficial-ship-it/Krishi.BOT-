@@ -1,70 +1,73 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import {
-  Mic,
-  MicOff,
-  Volume2,
-  Loader2,
-  Leaf,
-  Power,
-  HelpCircle,
-  Search,
-  AlertCircle,
-  Zap,
-  Globe,
-  Newspaper,
-  Calculator,
-  Heart,
-  StopCircle,
+  Mic, MicOff, Volume2, Loader2, Leaf, Power, HelpCircle,
+  Search, AlertCircle, Zap, Globe, Newspaper, Calculator,
+  Heart, StopCircle, Navigation, Droplets, FlaskConical,
+  Bug, CloudSun, ShoppingCart,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useApp } from "@/lib/app-context"
 import { t, type Language } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-type VoiceState = "idle" | "listening" | "processing" | "speaking"
+// ── Types ─────────────────────────────────────────────────────────────────────
+type VoiceState = "idle" | "wake" | "listening" | "processing" | "speaking"
 
 interface ConversationEntry {
   id: string
   role: "user" | "assistant"
   text: string
+  timestamp: Date
 }
 
-const voiceCommandExamples: Record<Language, { command: string; icon: typeof Power }[]> = {
+// ── Voice navigation routes ───────────────────────────────────────────────────
+const NAV_COMMANDS: { keywords: string[]; route: string; label: Record<Language, string> }[] = [
+  { keywords: ["soil", "मिट्टी", "माती"], route: "/soil", label: { en: "Opening Soil Tracker", hi: "मिट्टी ट्रैकर खोल रहा हूं", mr: "माती ट्रॅकर उघडत आहे" } },
+  { keywords: ["disease", "रोग", "बीमारी", "pests"], route: "/disease", label: { en: "Opening Disease Detection", hi: "रोग पहचान खोल रहा हूं", mr: "रोग ओळख उघडत आहे" } },
+  { keywords: ["spray", "spraying", "छिड़काव", "फवारणी"], route: "/spraying", label: { en: "Opening Spraying Advisor", hi: "छिड़काव सलाहकार खोल रहा हूं", mr: "फवारणी सल्लागार उघडत आहे" } },
+  { keywords: ["mandi", "price", "market", "भाव", "मंडी", "बाजार"], route: "/news", label: { en: "Opening Mandi Prices", hi: "मंडी भाव खोल रहा हूं", mr: "मंडी भाव उघडत आहे" } },
+  { keywords: ["news", "खबर", "बातम्या"], route: "/news", label: { en: "Opening News", hi: "खबरें खोल रहा हूं", mr: "बातम्या उघडत आहे" } },
+  { keywords: ["chat", "assistant", "सहायक"], route: "/chat", label: { en: "Opening AI Assistant", hi: "AI सहायक खोल रहा हूं", mr: "AI सहाय्यक उघडत आहे" } },
+]
+
+// ── Example commands ──────────────────────────────────────────────────────────
+const QUICK_COMMANDS: Record<Language, { label: string; query: string; icon: typeof Power; color: string }[]> = {
   en: [
-    { command: "Turn on motor", icon: Power },
-    { command: "What's the weather today?", icon: Search },
-    { command: "Tell me today's top news", icon: Newspaper },
-    { command: "Best crop for this season?", icon: Leaf },
-    { command: "How does drip irrigation work?", icon: HelpCircle },
-    { command: "What is 247 times 89?", icon: Calculator },
-    { command: "Health benefits of turmeric", icon: Heart },
-    { command: "PM-KISAN scheme details", icon: Globe },
+    { label: "Weather", query: "What's the weather today?", icon: CloudSun, color: "bg-blue-500/15 text-blue-400 border-blue-500/25" },
+    { label: "Mandi", query: "Show mandi prices for onion", icon: ShoppingCart, color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25" },
+    { label: "Soil Advice", query: "How to improve my soil health?", icon: FlaskConical, color: "bg-orange-500/15 text-orange-400 border-orange-500/25" },
+    { label: "Disease", query: "My wheat leaves are turning yellow, what disease?", icon: Bug, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "Irrigation", query: "When should I irrigate my crop?", icon: Droplets, color: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" },
+    { label: "Motor ON", query: "Turn on motor", icon: Power, color: "bg-green-500/15 text-green-400 border-green-500/25" },
+    { label: "Motor OFF", query: "Turn off motor", icon: Power, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "PM-KISAN", query: "PM-KISAN scheme details", icon: Globe, color: "bg-purple-500/15 text-purple-400 border-purple-500/25" },
   ],
   hi: [
-    { command: "मोटर चालू करो", icon: Power },
-    { command: "आज का मौसम कैसा है?", icon: Search },
-    { command: "आज की मुख्य खबरें बताओ", icon: Newspaper },
-    { command: "इस मौसम के लिए अच्छी फसल?", icon: Leaf },
-    { command: "ड्रिप सिंचाई कैसे काम करती है?", icon: HelpCircle },
-    { command: "247 गुणा 89 कितना होता है?", icon: Calculator },
-    { command: "हल्दी के स्वास्थ्य लाभ", icon: Heart },
-    { command: "PM-KISAN योजना की जानकारी", icon: Globe },
+    { label: "मौसम", query: "आज का मौसम कैसा है?", icon: CloudSun, color: "bg-blue-500/15 text-blue-400 border-blue-500/25" },
+    { label: "मंडी", query: "प्याज का मंडी भाव बताओ", icon: ShoppingCart, color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25" },
+    { label: "मिट्टी", query: "मेरी मिट्टी कैसे सुधारें?", icon: FlaskConical, color: "bg-orange-500/15 text-orange-400 border-orange-500/25" },
+    { label: "रोग", query: "मेरी गेहूं की पत्तियां पीली हो रही हैं, क्या रोग है?", icon: Bug, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "सिंचाई", query: "फसल में कब पानी दें?", icon: Droplets, color: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" },
+    { label: "मोटर चालू", query: "मोटर चालू करो", icon: Power, color: "bg-green-500/15 text-green-400 border-green-500/25" },
+    { label: "मोटर बंद", query: "मोटर बंद करो", icon: Power, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "PM-KISAN", query: "PM-KISAN योजना की जानकारी", icon: Globe, color: "bg-purple-500/15 text-purple-400 border-purple-500/25" },
   ],
   mr: [
-    { command: "मोटर चालू करा", icon: Power },
-    { command: "आजचे हवामान कसे आहे?", icon: Search },
-    { command: "आजच्या मुख्य बातम्या सांगा", icon: Newspaper },
-    { command: "या हंगामासाठी चांगले पीक?", icon: Leaf },
-    { command: "ठिबक सिंचन कसे कार्य करते?", icon: HelpCircle },
-    { command: "247 गुणिले 89 किती?", icon: Calculator },
-    { command: "हळदीचे आरोग्य फायदे", icon: Heart },
-    { command: "PM-KISAN योजनेची माहिती", icon: Globe },
+    { label: "हवामान", query: "आजचे हवामान कसे आहे?", icon: CloudSun, color: "bg-blue-500/15 text-blue-400 border-blue-500/25" },
+    { label: "मंडी", query: "कांद्याचा मंडी भाव सांगा", icon: ShoppingCart, color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/25" },
+    { label: "माती", query: "माझी माती कशी सुधारायची?", icon: FlaskConical, color: "bg-orange-500/15 text-orange-400 border-orange-500/25" },
+    { label: "रोग", query: "माझ्या गव्हाची पाने पिवळी पडत आहेत, काय रोग आहे?", icon: Bug, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "सिंचन", query: "पिकाला पाणी कधी द्यावे?", icon: Droplets, color: "bg-cyan-500/15 text-cyan-400 border-cyan-500/25" },
+    { label: "मोटर चालू", query: "मोटर चालू करा", icon: Power, color: "bg-green-500/15 text-green-400 border-green-500/25" },
+    { label: "मोटर बंद", query: "मोटर बंद करा", icon: Power, color: "bg-red-500/15 text-red-400 border-red-500/25" },
+    { label: "PM-KISAN", query: "PM-KISAN योजनेची माहिती", icon: Globe, color: "bg-purple-500/15 text-purple-400 border-purple-500/25" },
   ],
 }
+
+// ── Wake words ────────────────────────────────────────────────────────────────
+const WAKE_WORDS = ["krishi", "hey krishi", "krishibot", "कृषि", "क्रिषि"]
 
 function getSpeechRecognition(): (new () => SpeechRecognition) | null {
   if (typeof window === "undefined") return null
@@ -72,16 +75,32 @@ function getSpeechRecognition(): (new () => SpeechRecognition) | null {
   return (w.SpeechRecognition || w.webkitSpeechRecognition) as (new () => SpeechRecognition) | null
 }
 
+function cleanForSpeech(text: string): string {
+  return text
+    .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+    .replace(/[•*#_~`>|→]/g, "")
+    .replace(/\[MOTOR_ON\]|\[MOTOR_OFF\]/g, "")
+    .replace(/\n+/g, ". ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+}
+
+// ── Main Component ─────────────────────────────────────────────────────────────
 export function VoiceAssistant() {
   const { language, setIsMotorOn } = useApp()
+  const router = useRouter()
   const [state, setState] = useState<VoiceState>("idle")
   const [conversation, setConversation] = useState<ConversationEntry[]>([])
   const [speechSupported, setSpeechSupported] = useState<boolean | null>(null)
   const [textInput, setTextInput] = useState("")
-  const [pulseSize, setPulseSize] = useState(1)
   const [error, setError] = useState<string | null>(null)
-  const animationRef = useRef<number | null>(null)
+  const [isMotorOn, setLocalMotorOn] = useState(false)
+  const [wakeMode, setWakeMode] = useState(false) // continuous wake-word listening
+  const [navMessage, setNavMessage] = useState<string | null>(null)
+  const [speakingId, setSpeakingId] = useState<string | null>(null)
+
   const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const wakeRecognitionRef = useRef<SpeechRecognition | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -89,188 +108,178 @@ export function VoiceAssistant() {
     setSpeechSupported(getSpeechRecognition() !== null)
   }, [])
 
-  // Pulse animation
-  useEffect(() => {
-    if (state === "listening") {
-      const animate = () => {
-        setPulseSize(1 + Math.sin(Date.now() / 300) * 0.15)
-        animationRef.current = requestAnimationFrame(animate)
-      }
-      animationRef.current = requestAnimationFrame(animate)
-    } else {
-      setPulseSize(1)
-      if (animationRef.current) cancelAnimationFrame(animationRef.current)
-    }
-    return () => {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current)
-    }
-  }, [state])
-
-  // Auto-scroll conversation
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [conversation])
 
-  const speakResponse = useCallback(
-    (text: string): Promise<void> => {
-      return new Promise((resolve) => {
-        if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-          resolve()
-          return
-        }
-        try {
-          window.speechSynthesis.cancel()
-          const langMap: Record<string, string> = { en: "en-US", hi: "hi-IN", mr: "mr-IN" }
-          const utterance = new SpeechSynthesisUtterance(text)
-          utterance.lang = langMap[language]
-          utterance.rate = 0.95
-          utterance.pitch = 1.0
-          utterance.onend = () => resolve()
-          utterance.onerror = () => resolve()
-          window.speechSynthesis.speak(utterance)
-        } catch {
-          resolve()
-        }
-      })
-    },
-    [language]
-  )
-
-  const processCommand = useCallback(
-    async (text: string) => {
-      setState("processing")
-      setError(null)
-
-      // Add user entry
-      const userEntry: ConversationEntry = {
-        id: `user-${Date.now()}`,
-        role: "user",
-        text,
-      }
-      setConversation((prev) => [...prev, userEntry])
-
+  // ── TTS ───────────────────────────────────────────────────────────────────
+  const speakText = useCallback((text: string, id?: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) { resolve(); return }
       try {
-        abortRef.current = new AbortController()
+        window.speechSynthesis.cancel()
+        const langMap: Record<string, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" }
+        const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text))
+        utterance.lang = langMap[language] ?? "en-IN"
+        utterance.rate = 0.95
+        utterance.pitch = 1.0
+        if (id) utterance.onstart = () => setSpeakingId(id)
+        utterance.onend = () => { setSpeakingId(null); resolve() }
+        utterance.onerror = () => { setSpeakingId(null); resolve() }
+        window.speechSynthesis.speak(utterance)
+      } catch { resolve() }
+    })
+  }, [language])
 
-        const res = await fetch("/api/voice", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ prompt: text, language }),
-          signal: abortRef.current.signal,
-        })
-
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`)
-        }
-
-        const data = await res.json()
-        const responseText: string = data.text || "I could not process that. Please try again."
-
-        // Check for motor commands
-        if (responseText.includes("[MOTOR_ON]")) setIsMotorOn(true)
-        if (responseText.includes("[MOTOR_OFF]")) setIsMotorOn(false)
-
-        const cleanResponse = responseText
-          .replace(/\[MOTOR_ON\]/g, "")
-          .replace(/\[MOTOR_OFF\]/g, "")
-          .trim()
-
-        const aiEntry: ConversationEntry = {
-          id: `ai-${Date.now()}`,
-          role: "assistant",
-          text: cleanResponse,
-        }
-        setConversation((prev) => [...prev, aiEntry])
-
-        // Speak the response
-        setState("speaking")
-        await speakResponse(cleanResponse)
-        setState("idle")
-      } catch (err: unknown) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          setState("idle")
-          return
-        }
-        const errorMsg =
-          language === "hi"
-            ? "AI से जुड़ने में समस्या। कृपया पुनः प्रयास करें।"
-            : language === "mr"
-              ? "AI शी कनेक्ट करण्यात समस्या. कृपया पुन्हा प्रयत्न करा."
-              : "Could not connect to AI. Please try again."
-        setError(errorMsg)
-        setState("idle")
+  // ── Check for nav commands in transcript ──────────────────────────────────
+  const checkNavCommand = useCallback((text: string): boolean => {
+    const lower = text.toLowerCase()
+    // Must contain "open" or "go to" or "show" or similar navigation intent
+    const hasNavIntent = ["open", "go to", "show", "खोलो", "जाओ", "उघडा", "दाखव"].some(w => lower.includes(w))
+    if (!hasNavIntent) return false
+    for (const nav of NAV_COMMANDS) {
+      if (nav.keywords.some(k => lower.includes(k))) {
+        const msg = nav.label[language as Language] ?? nav.label.en
+        setNavMessage(msg)
+        speakText(msg)
+        setTimeout(() => { setNavMessage(null); router.push(nav.route) }, 1500)
+        return true
       }
-    },
-    [language, setIsMotorOn, speakResponse]
-  )
-
-  const handleVoiceInput = useCallback(() => {
-    if (state === "listening") {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop() } catch { /* */ }
-        recognitionRef.current = null
-      }
-      setState("idle")
-      return
     }
+    return false
+  }, [language, router, speakText])
 
-    if (state === "speaking") {
-      window.speechSynthesis?.cancel()
-      setState("idle")
-      return
-    }
-
-    const SpeechRecognitionClass = getSpeechRecognition()
-    if (!SpeechRecognitionClass) return
-
-    setState("listening")
+  // ── Process command through AI ────────────────────────────────────────────
+  const processCommand = useCallback(async (text: string) => {
+    setState("processing")
     setError(null)
 
+    // Check navigation first
+    if (checkNavCommand(text)) { setState("idle"); return }
+
+    const userEntry: ConversationEntry = { id: `user-${Date.now()}`, role: "user", text, timestamp: new Date() }
+    setConversation(prev => [...prev, userEntry])
+
     try {
-      const recognition = new SpeechRecognitionClass()
+      abortRef.current = new AbortController()
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text, language }),
+        signal: abortRef.current.signal,
+      })
+      if (!res.ok) throw new Error(`API error: ${res.status}`)
+      const data = await res.json()
+      const responseText: string = data.text || "Could not process. Please try again."
+
+      if (responseText.includes("[MOTOR_ON]")) { setIsMotorOn(true); setLocalMotorOn(true) }
+      if (responseText.includes("[MOTOR_OFF]")) { setIsMotorOn(false); setLocalMotorOn(false) }
+
+      const clean = responseText.replace(/\[MOTOR_ON\]/g, "").replace(/\[MOTOR_OFF\]/g, "").trim()
+      const aiId = `ai-${Date.now()}`
+      const aiEntry: ConversationEntry = { id: aiId, role: "assistant", text: clean, timestamp: new Date() }
+      setConversation(prev => [...prev, aiEntry])
+
+      setState("speaking")
+      await speakText(clean, aiId)
+      setState("idle")
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") { setState("idle"); return }
+      const msg = language === "hi" ? "AI से जुड़ने में समस्या।" : language === "mr" ? "AI शी कनेक्ट करण्यात समस्या." : "Could not connect to AI. Please try again."
+      setError(msg)
+      setState("idle")
+    }
+  }, [language, setIsMotorOn, speakText, checkNavCommand])
+
+  // ── Start listening ───────────────────────────────────────────────────────
+  const startListening = useCallback(() => {
+    const SR = getSpeechRecognition()
+    if (!SR) return
+    setState("listening")
+    setError(null)
+    try {
+      const recognition = new SR()
       recognitionRef.current = recognition
-      const langMap: Record<string, string> = { en: "en-US", hi: "hi-IN", mr: "mr-IN" }
-      recognition.lang = langMap[language]
+      const langMap: Record<string, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" }
+      recognition.lang = langMap[language] ?? "en-IN"
       recognition.interimResults = false
       recognition.continuous = false
       recognition.maxAlternatives = 1
-
       recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const last = event.results[event.results.length - 1]
-        const text = last[0].transcript
+        const text = event.results[event.results.length - 1][0].transcript
         recognitionRef.current = null
-        if (text.trim()) {
-          processCommand(text.trim())
-        } else {
-          setState("idle")
-        }
+        if (text.trim()) processCommand(text.trim())
+        else setState("idle")
       }
-
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
         recognitionRef.current = null
         setState("idle")
         if (event.error === "not-allowed") {
-          setError(
-            language === "hi"
-              ? "माइक्रोफ़ोन की अनुमति नहीं है। नीचे टेक्स्ट इनपुट का उपयोग करें।"
-              : language === "mr"
-                ? "मायक्रोफोन परवानगी नाही. खाली मजकूर इनपुट वापरा."
-                : "Microphone permission denied. Use the text input below."
-          )
+          setError(language === "hi" ? "माइक्रोफ़ोन की अनुमति नहीं।" : language === "mr" ? "मायक्रोफोन परवानगी नाही." : "Microphone permission denied.")
         }
       }
-
-      recognition.onend = () => {
-        recognitionRef.current = null
-      }
-
+      recognition.onend = () => { recognitionRef.current = null }
       recognition.start()
-    } catch {
-      setState("idle")
+    } catch { setState("idle") }
+  }, [language, processCommand])
+
+  // ── Wake word mode — continuous background listening ──────────────────────
+  const startWakeMode = useCallback(() => {
+    const SR = getSpeechRecognition()
+    if (!SR || wakeMode) return
+    setWakeMode(true)
+    const recognition = new SR()
+    wakeRecognitionRef.current = recognition
+    const langMap: Record<string, string> = { en: "en-IN", hi: "hi-IN", mr: "mr-IN" }
+    recognition.lang = langMap[language] ?? "en-IN"
+    recognition.interimResults = true
+    recognition.continuous = true
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const last = event.results[event.results.length - 1]
+      const transcript = last[0].transcript.toLowerCase()
+      const hasWake = WAKE_WORDS.some(w => transcript.includes(w))
+      if (hasWake && last.isFinal) {
+        // Strip wake word and process the rest
+        let query = transcript
+        WAKE_WORDS.forEach(w => { query = query.replace(w, "").trim() })
+        if (query.length > 2) processCommand(query)
+        else startListening() // wake word only → start manual listening
+      }
     }
-  }, [state, language, processCommand])
+    recognition.onerror = () => { setWakeMode(false); wakeRecognitionRef.current = null }
+    recognition.onend = () => {
+      // Restart if still in wake mode
+      if (wakeMode) {
+        try { recognition.start() } catch { setWakeMode(false) }
+      }
+    }
+    recognition.start()
+  }, [language, wakeMode, processCommand, startListening])
+
+  const stopWakeMode = useCallback(() => {
+    setWakeMode(false)
+    try { wakeRecognitionRef.current?.stop() } catch { /* */ }
+    wakeRecognitionRef.current = null
+  }, [])
+
+  // ── Main button handler ───────────────────────────────────────────────────
+  const handleMainButton = useCallback(() => {
+    if (state === "listening") {
+      try { recognitionRef.current?.stop() } catch { /* */ }
+      recognitionRef.current = null
+      setState("idle")
+    } else if (state === "speaking") {
+      window.speechSynthesis?.cancel()
+      setState("idle")
+    } else if (state === "processing") {
+      abortRef.current?.abort()
+      setState("idle")
+    } else {
+      startListening()
+    }
+  }, [state, startListening])
 
   const handleTextSubmit = useCallback(() => {
     if (!textInput.trim() || state === "processing" || state === "speaking") return
@@ -278,222 +287,276 @@ export function VoiceAssistant() {
     setTextInput("")
   }, [textInput, state, processCommand])
 
-  const handleExampleClick = useCallback(
-    (command: string) => {
-      if (state === "processing" || state === "speaking") return
-      processCommand(command)
-    },
-    [state, processCommand]
-  )
+  const replayMessage = useCallback((entry: ConversationEntry) => {
+    if (speakingId === entry.id) { window.speechSynthesis?.cancel(); setSpeakingId(null); return }
+    speakText(entry.text, entry.id)
+  }, [speakingId, speakText])
 
-  const stopAction = useCallback(() => {
-    if (state === "speaking") {
-      window.speechSynthesis?.cancel()
-      setState("idle")
-    } else if (state === "processing") {
-      abortRef.current?.abort()
-      setState("idle")
-    }
-  }, [state])
+  const langMap: Record<string, string> = { en: "en", hi: "hi", mr: "mr" }
+  const lang = (langMap[language] ?? "en") as Language
+  const commands = QUICK_COMMANDS[lang]
 
-  const stateLabels: Record<VoiceState, string> = {
-    idle: t("tapToSpeak", language),
-    listening: t("listening", language),
-    processing: t("processing", language),
-    speaking: t("speaking", language),
-  }
-
-  const commands = voiceCommandExamples[language]
+  const stateLabel = {
+    idle: language === "hi" ? "बोलने के लिए दबाएं" : language === "mr" ? "बोलण्यासाठी दाबा" : "Tap to Speak",
+    wake: language === "hi" ? "जाग रहा हूं..." : language === "mr" ? "जागे आहे..." : "Wake mode active...",
+    listening: language === "hi" ? "सुन रहा हूं..." : language === "mr" ? "ऐकतोय..." : "Listening...",
+    processing: language === "hi" ? "सोच रहा हूं..." : language === "mr" ? "विचार करतोय..." : "Thinking...",
+    speaking: language === "hi" ? "बोल रहा हूं..." : language === "mr" ? "बोलतोय..." : "Speaking...",
+  }[state]
 
   return (
-    <div className="flex flex-col items-center gap-5 py-6 px-4 max-w-lg mx-auto">
-      {/* Main Voice Button */}
-      <div className="relative flex items-center justify-center">
-        {state === "listening" && (
-          <>
-            <span className="absolute h-40 w-40 rounded-full bg-primary/5 animate-ping [animation-duration:2s]" />
-            <span className="absolute h-52 w-52 rounded-full bg-primary/5 animate-ping [animation-duration:3s]" />
-          </>
-        )}
-        {state === "speaking" && (
-          <span className="absolute h-40 w-40 rounded-full bg-accent/10 animate-pulse" />
-        )}
-        {state === "processing" && (
-          <span className="absolute h-36 w-36 rounded-full border-2 border-dashed border-muted-foreground/30 animate-spin [animation-duration:3s]" />
-        )}
+    <div className="min-h-screen bg-background pb-24">
+      <div className="max-w-lg mx-auto px-4 py-5 space-y-5">
 
-        <button
-          onClick={state === "processing" || state === "speaking" ? stopAction : handleVoiceInput}
-          className={cn(
-            "relative z-10 flex h-28 w-28 items-center justify-center rounded-full transition-all duration-300 shadow-xl cursor-pointer",
-            state === "idle" && "bg-primary hover:scale-105 text-primary-foreground shadow-primary/20",
-            state === "listening" && "bg-primary text-primary-foreground shadow-primary/40",
-            state === "processing" && "bg-muted text-muted-foreground",
-            state === "speaking" && "bg-accent text-accent-foreground shadow-accent/30"
-          )}
-          style={state === "listening" ? { transform: `scale(${pulseSize})` } : undefined}
-          aria-label={stateLabels[state]}
-        >
-          {state === "processing" ? (
-            <Loader2 className="h-9 w-9 animate-spin" />
-          ) : state === "speaking" ? (
-            <Volume2 className="h-9 w-9" />
-          ) : state === "listening" ? (
-            <MicOff className="h-9 w-9" />
-          ) : (
-            <Mic className="h-9 w-9" />
-          )}
-        </button>
-      </div>
-
-      {/* State Label */}
-      <div className="text-center space-y-1">
-        <div
-          className={cn(
-            "text-lg font-semibold",
-            state === "listening" && "text-primary",
-            state === "speaking" && "text-accent",
-            state === "processing" && "text-muted-foreground",
-            state === "idle" && "text-foreground"
-          )}
-        >
-          {stateLabels[state]}
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Leaf className="w-5 h-5 text-primary" />
+              {language === "hi" ? "कृषि वॉइस" : language === "mr" ? "कृषि व्हॉइस" : "Krishi Voice"}
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {language === "hi" ? "बोलें या टाइप करें — हिंदी, मराठी, English" : language === "mr" ? "बोला किंवा टाइप करा" : "Speak or type — any language"}
+            </p>
+          </div>
+          {/* Motor status badge */}
+          <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all",
+            isMotorOn
+              ? "bg-green-500/15 text-green-400 border-green-500/30"
+              : "bg-secondary text-muted-foreground border-border"
+          )}>
+            <Power className="w-3 h-3" />
+            <span>{language === "hi" ? "मोटर" : language === "mr" ? "मोटर" : "Motor"}</span>
+            <span className={cn("w-2 h-2 rounded-full", isMotorOn ? "bg-green-400 animate-pulse" : "bg-muted-foreground/40")} />
+          </div>
         </div>
-        {state === "idle" && (
-          <p className="text-sm text-muted-foreground">
-            {language === "hi"
-              ? "कुछ भी पूछें - खबरें, ज्ञान, गणित, स्वास्थ्य, खेती..."
-              : language === "mr"
-                ? "काहीही विचारा - बातम्या, ज्ञान, गणित, आरोग्य, शेती..."
-                : "Ask me anything - news, knowledge, math, health, farming..."}
-          </p>
-        )}
-        {(state === "processing" || state === "speaking") && (
-          <button onClick={stopAction} className="inline-flex items-center gap-1.5 text-xs text-destructive-foreground hover:underline cursor-pointer">
-            <StopCircle className="h-3 w-3" />
-            {language === "hi" ? "रोकें" : language === "mr" ? "थांबवा" : "Stop"}
-          </button>
-        )}
-      </div>
 
-      {/* Error */}
-      {error && (
-        <div className="flex items-start gap-2 w-full rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <AlertCircle className="h-4 w-4 text-destructive-foreground mt-0.5 shrink-0" />
-          <p className="text-xs text-foreground leading-relaxed">{error}</p>
-        </div>
-      )}
-
-      {/* Speech Not Supported Notice */}
-      {speechSupported === false && (
-        <div className="flex items-start gap-2 w-full rounded-lg border border-primary/20 bg-primary/5 p-3">
-          <AlertCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-          <p className="text-xs text-foreground leading-relaxed">
-            {language === "hi"
-              ? "वॉइस इनपुट इस ब्राउज़र में उपलब्ध नहीं है। नीचे टाइप करें।"
-              : language === "mr"
-                ? "व्हॉइस इनपुट या ब्राउझरमध्ये उपलब्ध नाही. खाली टाइप करा."
-                : "Voice input unavailable in this browser. Type your command below."}
-          </p>
-        </div>
-      )}
-
-      {/* Text Input */}
-      <div className="flex gap-2 w-full">
-        <Input
-          value={textInput}
-          onChange={(e) => setTextInput(e.target.value)}
-          placeholder={
-            language === "hi"
-              ? "कुछ भी पूछें..."
-              : language === "mr"
-                ? "काहीही विचारा..."
-                : "Ask anything..."
-          }
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleTextSubmit()
-          }}
-          disabled={state === "processing" || state === "speaking"}
-          className="flex-1"
-        />
-        <Button
-          onClick={handleTextSubmit}
-          disabled={!textInput.trim() || state === "processing" || state === "speaking"}
-          size="default"
-        >
-          <Zap className="h-4 w-4 mr-1" />
-          {language === "hi" ? "पूछो" : language === "mr" ? "विचारा" : "Ask"}
-        </Button>
-      </div>
-
-      {/* Conversation History */}
-      {conversation.length > 0 && (
-        <Card className="w-full border-border bg-card">
-          <CardContent className="p-3 max-h-64 overflow-y-auto space-y-3" ref={scrollRef}>
-            {conversation.map((entry) => (
-              <div
-                key={entry.id}
-                className={cn(
-                  "rounded-xl p-3 text-sm leading-relaxed",
-                  entry.role === "user"
-                    ? "bg-primary/10 text-foreground ml-8"
-                    : "bg-secondary text-secondary-foreground mr-4"
-                )}
-              >
-                {entry.role === "assistant" && (
-                  <div className="text-xs text-primary mb-1 font-medium flex items-center gap-1">
-                    <Leaf className="h-3 w-3" />
-                    KrishiBot AI
-                  </div>
-                )}
-                {entry.role === "user" && (
-                  <div className="text-xs text-muted-foreground mb-1 font-medium">
-                    {language === "hi" ? "आपने कहा:" : language === "mr" ? "तुम्ही म्हणालात:" : "You said:"}
-                  </div>
-                )}
-                <div className="whitespace-pre-wrap">{entry.text}</div>
-              </div>
-            ))}
-            {state === "processing" && (
-              <div className="rounded-xl bg-secondary p-3 mr-4">
-                <div className="text-xs text-primary mb-1 font-medium flex items-center gap-1">
-                  <Leaf className="h-3 w-3" />
-                  KrishiBot AI
-                </div>
-                <div className="flex gap-1.5 py-1">
-                  <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce [animation-delay:0ms]" />
-                  <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce [animation-delay:150ms]" />
-                  <span className="h-2 w-2 rounded-full bg-primary/40 animate-bounce [animation-delay:300ms]" />
-                </div>
-              </div>
+        {/* ── Main Voice Button ── */}
+        <div className="flex flex-col items-center gap-4 py-4">
+          <div className="relative flex items-center justify-center">
+            {/* Rings */}
+            {state === "listening" && (
+              <>
+                <span className="absolute w-44 h-44 rounded-full bg-primary/5 animate-ping [animation-duration:1.5s]" />
+                <span className="absolute w-56 h-56 rounded-full bg-primary/3 animate-ping [animation-duration:2.5s]" />
+              </>
             )}
-          </CardContent>
-        </Card>
-      )}
+            {state === "speaking" && (
+              <span className="absolute w-44 h-44 rounded-full bg-green-500/10 animate-pulse" />
+            )}
+            {state === "processing" && (
+              <span className="absolute w-40 h-40 rounded-full border-2 border-dashed border-primary/20 animate-spin [animation-duration:3s]" />
+            )}
+            {wakeMode && state === "idle" && (
+              <span className="absolute w-36 h-36 rounded-full border border-primary/20 animate-pulse" />
+            )}
 
-      {/* Example Commands */}
-      {state === "idle" && conversation.length === 0 && (
-        <Card className="w-full border-border bg-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <HelpCircle className="h-4 w-4 text-primary" />
-              {t("voiceCommands", language)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              onClick={handleMainButton}
+              className={cn(
+                "relative z-10 w-32 h-32 rounded-full flex flex-col items-center justify-center gap-1.5 transition-all duration-300 shadow-2xl",
+                state === "idle" && "bg-primary text-primary-foreground hover:scale-105 shadow-primary/25",
+                state === "listening" && "bg-primary text-primary-foreground scale-110 shadow-primary/40",
+                state === "processing" && "bg-muted text-muted-foreground",
+                state === "speaking" && "bg-green-500 text-white shadow-green-500/30",
+              )}
+            >
+              {state === "processing" ? <Loader2 className="w-10 h-10 animate-spin" />
+                : state === "speaking" ? <Volume2 className="w-10 h-10" />
+                : state === "listening" ? <MicOff className="w-10 h-10" />
+                : <Mic className="w-10 h-10" />}
+              <span className="text-[10px] font-medium opacity-80">
+                {state === "idle" ? (language === "hi" ? "दबाएं" : language === "mr" ? "दाबा" : "Tap") : ""}
+              </span>
+            </button>
+          </div>
+
+          {/* State label */}
+          <div className="text-center space-y-1">
+            <p className={cn(
+              "text-base font-semibold",
+              state === "listening" && "text-primary",
+              state === "speaking" && "text-green-400",
+              state === "processing" && "text-muted-foreground",
+              state === "idle" && "text-foreground",
+            )}>
+              {stateLabel}
+            </p>
+            {(state === "processing" || state === "speaking") && (
+              <button onClick={() => { abortRef.current?.abort(); window.speechSynthesis?.cancel(); setState("idle") }}
+                className="inline-flex items-center gap-1 text-xs text-destructive-foreground hover:underline">
+                <StopCircle className="w-3 h-3" />
+                {language === "hi" ? "रोकें" : language === "mr" ? "थांबवा" : "Stop"}
+              </button>
+            )}
+          </div>
+
+          {/* Wake word toggle */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={wakeMode ? stopWakeMode : startWakeMode}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-medium transition-all",
+                wakeMode
+                  ? "bg-primary/20 text-primary border-primary/40 animate-pulse"
+                  : "bg-secondary text-muted-foreground border-border hover:border-primary/40 hover:text-primary"
+              )}
+            >
+              <span className={cn("w-2 h-2 rounded-full", wakeMode ? "bg-primary" : "bg-muted-foreground/40")} />
+              {wakeMode
+                ? (language === "hi" ? "\"हे कृषि\" सुन रहा हूं" : language === "mr" ? "\"हे कृषि\" ऐकत आहे" : "Listening for \"Hey Krishi\"")
+                : (language === "hi" ? "वेक वर्ड चालू करें" : language === "mr" ? "वेक वर्ड सुरू करा" : "Enable Wake Word")}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Nav message toast ── */}
+        {navMessage && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 border border-primary/20 text-primary text-sm font-medium">
+            <Navigation className="w-4 h-4 shrink-0" />
+            {navMessage}
+          </div>
+        )}
+
+        {/* ── Error ── */}
+        {error && (
+          <div className="flex items-start gap-2 p-3 rounded-xl border border-destructive/30 bg-destructive/5">
+            <AlertCircle className="w-4 h-4 text-destructive-foreground mt-0.5 shrink-0" />
+            <p className="text-xs text-foreground">{error}</p>
+          </div>
+        )}
+
+        {/* ── Quick Command Grid ── */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            {language === "hi" ? "त्वरित कमांड" : language === "mr" ? "जलद कमांड" : "Quick Commands"}
+          </p>
+          <div className="grid grid-cols-4 gap-2">
             {commands.map((cmd, i) => (
-              <button
-                key={i}
-                onClick={() => handleExampleClick(cmd.command)}
-                className="flex items-center gap-2.5 p-2.5 rounded-lg bg-secondary/50 hover:bg-secondary text-sm transition-colors text-left cursor-pointer"
-              >
-                <cmd.icon className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-foreground">{`"${cmd.command}"`}</span>
+              <button key={i}
+                onClick={() => processCommand(cmd.query)}
+                disabled={state === "processing" || state === "speaking"}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 p-2.5 rounded-xl border text-center transition-all disabled:opacity-50 hover:scale-105 active:scale-95",
+                  cmd.color
+                )}>
+                <cmd.icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium leading-tight">{cmd.label}</span>
               </button>
             ))}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+
+        {/* ── Text Input ── */}
+        <div className="flex gap-2">
+          <input
+            value={textInput}
+            onChange={e => setTextInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleTextSubmit()}
+            placeholder={language === "hi" ? "कुछ भी टाइप करें..." : language === "mr" ? "काहीही टाइप करा..." : "Type anything..."}
+            disabled={state === "processing" || state === "speaking"}
+            className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 disabled:opacity-60"
+          />
+          <button
+            onClick={handleTextSubmit}
+            disabled={!textInput.trim() || state === "processing" || state === "speaking"}
+            className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground font-medium text-sm disabled:opacity-40 hover:opacity-90 transition-opacity flex items-center gap-1.5"
+          >
+            <Zap className="w-4 h-4" />
+            {language === "hi" ? "पूछो" : language === "mr" ? "विचारा" : "Ask"}
+          </button>
+        </div>
+
+        {/* ── Conversation History ── */}
+        {conversation.length > 0 && (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-secondary/50">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {language === "hi" ? "बातचीत" : language === "mr" ? "संभाषण" : "Conversation"}
+              </p>
+              <button onClick={() => setConversation([])}
+                className="text-[10px] text-muted-foreground hover:text-destructive-foreground transition-colors">
+                {language === "hi" ? "साफ करें" : language === "mr" ? "साफ करा" : "Clear"}
+              </button>
+            </div>
+            <div className="p-3 max-h-72 overflow-y-auto space-y-3" ref={scrollRef}>
+              {conversation.map(entry => (
+                <div key={entry.id} className={cn("flex", entry.role === "user" ? "justify-end" : "justify-start")}>
+                  <div className={cn(
+                    "max-w-[88%] flex flex-col gap-1",
+                    entry.role === "user" ? "items-end" : "items-start"
+                  )}>
+                    <div className={cn(
+                      "rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap",
+                      entry.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-secondary border border-border text-foreground rounded-bl-sm"
+                    )}>
+                      {entry.role === "assistant" && (
+                        <div className="flex items-center gap-1 text-[10px] text-primary mb-1 font-medium">
+                          <Leaf className="w-3 h-3" /> KrishiBot
+                        </div>
+                      )}
+                      {entry.text}
+                    </div>
+                    {/* Listen button on AI messages */}
+                    {entry.role === "assistant" && (
+                      <button
+                        onClick={() => replayMessage(entry)}
+                        className={cn(
+                          "flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all",
+                          speakingId === entry.id
+                            ? "bg-green-500/20 text-green-400 border-green-500/30 animate-pulse"
+                            : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                        )}>
+                        {speakingId === entry.id ? "⏹ Stop" : "🔊 Listen"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {state === "processing" && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary border border-border rounded-2xl rounded-bl-sm px-4 py-3">
+                    <div className="flex gap-1.5 items-center">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Voice nav commands tip ── */}
+        {conversation.length === 0 && (
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+              <Navigation className="w-3.5 h-3.5 text-primary" />
+              {language === "hi" ? "वॉइस नेविगेशन" : language === "mr" ? "व्हॉइस नेव्हिगेशन" : "Voice Navigation"}
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {[
+                language === "hi" ? '"कृषि, मिट्टी पेज खोलो"' : language === "mr" ? '"कृषि, माती पान उघडा"' : '"Open soil page"',
+                language === "hi" ? '"कृषि, रोग पहचान दिखाओ"' : language === "mr" ? '"कृषि, रोग ओळख दाखव"' : '"Show disease detection"',
+                language === "hi" ? '"कृषि, मंडी भाव जाओ"' : language === "mr" ? '"कृषि, मंडी भाव जा"' : '"Go to mandi prices"',
+                language === "hi" ? '"कृषि, छिड़काव सलाहकार"' : language === "mr" ? '"कृषि, फवारणी सल्लागार"' : '"Open spraying advisor"',
+              ].map((cmd, i) => (
+                <div key={i} className="bg-secondary rounded-lg px-3 py-2 text-xs text-muted-foreground border border-border">
+                  {cmd}
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {language === "hi" ? '* "Hey Krishi" से शुरू करें या वेक वर्ड चालू करें' : language === "mr" ? '* "Hey Krishi" ने सुरुवात करा किंवा वेक वर्ड सुरू करा' : '* Say "Hey Krishi" first, or enable wake word mode above'}
+            </p>
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }
