@@ -26,10 +26,10 @@ const T = {
     slightlyHigh: "Slightly High",
     chatTitle: "Ask about your soil",
     chatPlaceholder: "Ask a follow-up question…",
-    chatSend: "Send",
-    chatThinking: "Thinking…",
+    chatSend: "Send", chatThinking: "Thinking…",
     chatHint: "Ask me anything about your soil results",
     chatSuggestions: ["How can I improve my soil score?", "Which fertilizer is best for my crop?", "When should I apply compost?", "Is my pH safe for wheat?"],
+    listening: "Listening...",
   },
   hi: {
     title: "🌱 मिट्टी स्वास्थ्य ट्रैकर",
@@ -52,10 +52,10 @@ const T = {
     slightlyHigh: "थोड़ा अधिक",
     chatTitle: "अपनी मिट्टी के बारे में पूछें",
     chatPlaceholder: "अनुवर्ती प्रश्न पूछें…",
-    chatSend: "भेजें",
-    chatThinking: "सोच रहा है…",
+    chatSend: "भेजें", chatThinking: "सोच रहा है…",
     chatHint: "अपने मिट्टी परिणामों के बारे में कुछ भी पूछें",
     chatSuggestions: ["मेरा स्कोर कैसे सुधारें?", "मेरी फसल के लिए सबसे अच्छा खाद?", "कम्पोस्ट कब डालें?", "गेहूँ के लिए pH ठीक है?"],
+    listening: "सुन रहा हूं...",
   },
   mr: {
     title: "🌱 माती आरोग्य ट्रॅकर",
@@ -78,10 +78,10 @@ const T = {
     slightlyHigh: "किंचित जास्त",
     chatTitle: "तुमच्या मातीबद्दल विचारा",
     chatPlaceholder: "पुढील प्रश्न विचारा…",
-    chatSend: "पाठवा",
-    chatThinking: "विचार करत आहे…",
+    chatSend: "पाठवा", chatThinking: "विचार करत आहे…",
     chatHint: "तुमच्या माती निकालांबद्दल काहीही विचारा",
     chatSuggestions: ["माझा स्कोर कसा सुधारावा?", "माझ्या पिकासाठी सर्वोत्तम खत?", "कंपोस्ट केव्हा द्यावे?", "गव्हासाठी pH योग्य आहे का?"],
+    listening: "ऐकतोय...",
   },
 };
 
@@ -99,11 +99,11 @@ function getNutrientStatus(key: string, value: number) {
   const r = RANGES[key];
   if (!r) return { label: "—", color: "text-gray-400", bar: "bg-gray-400", dot: "🔵", pct: 50 };
   const pct = Math.min(100, Math.max(2, (value / r.max) * 100));
-  if (value < r.critLow)    return { label: "low",         color: "text-red-400",    bar: "bg-red-400",    dot: "🔴", pct };
-  if (value < r.slightLow)  return { label: "slightlyLow", color: "text-yellow-400", bar: "bg-yellow-400", dot: "🟡", pct };
-  if (value <= r.idealHigh) return { label: "ideal",       color: "text-green-400",  bar: "bg-green-400",  dot: "🟢", pct };
-  if (value <= r.slightHigh)return { label: "slightlyHigh",color: "text-yellow-400", bar: "bg-yellow-400", dot: "🟡", pct };
-  return                           { label: "high",        color: "text-orange-400", bar: "bg-orange-400", dot: "🟠", pct };
+  if (value < r.critLow)     return { label: "low",          color: "text-red-400",    bar: "bg-red-400",    dot: "🔴", pct };
+  if (value < r.slightLow)   return { label: "slightlyLow",  color: "text-yellow-400", bar: "bg-yellow-400", dot: "🟡", pct };
+  if (value <= r.idealHigh)  return { label: "ideal",        color: "text-green-400",  bar: "bg-green-400",  dot: "🟢", pct };
+  if (value <= r.slightHigh) return { label: "slightlyHigh", color: "text-yellow-400", bar: "bg-yellow-400", dot: "🟡", pct };
+  return                            { label: "high",         color: "text-orange-400", bar: "bg-orange-400", dot: "🟠", pct };
 }
 
 function scoreMeta(score: number) {
@@ -115,39 +115,26 @@ function scoreMeta(score: number) {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface FertilizerRec {
-  name: string;
-  dose: string;
-  reason: string;
-  costPerDose?: number;
-  timing?: string[];
+  name: string; dose: string; reason: string;
+  costPerDose?: number; timing?: string[];
 }
-interface IrrigationAdvice {
-  nextInDays: number;
-  waterAmountMm: number;
-  note: string;
-}
+interface IrrigationAdvice { nextInDays: number; waterAmountMm: number; note: string }
 interface TimelineYear { year: number; score: number; note: string }
 interface YieldPrediction { crop: string; minYield: string; maxYield: string; unit: string }
 interface SoilResult {
-  score: number;
-  overallHealth: string;
-  warnings: string[];
-  recommendations: string[];
-  fertilizers: FertilizerRec[];
-  amendments: string[];
-  suitableCrops: string[];
+  score: number; overallHealth: string;
+  warnings: string[]; recommendations: string[];
+  fertilizers: FertilizerRec[]; amendments: string[]; suitableCrops: string[];
   yieldPrediction?: YieldPrediction;
   irrigationAdvice?: IrrigationAdvice;
   improvementTimeline?: TimelineYear[];
 }
 
-// ── Fertilizer cost lookup ─────────────────────────────────────────────────────
 const FERT_PRICES: Record<string, number> = { DAP: 1350, MOP: 850, UREA: 266, SSP: 400, NPK: 1100 };
 function getFertCost(f: FertilizerRec): number {
   if (f.costPerDose) return f.costPerDose;
-  for (const [k, price] of Object.entries(FERT_PRICES)) {
+  for (const [k, price] of Object.entries(FERT_PRICES))
     if (f.name.toUpperCase().includes(k)) return price;
-  }
   return 0;
 }
 
@@ -164,12 +151,18 @@ export default function SoilPage() {
   const [result, setResult] = useState<SoilResult | null>(null);
   const [error, setError] = useState("");
 
-  // ── Soil Chat state ────────────────────────────────────────────────────────
+  // ── Chat state ─────────────────────────────────────────────────────────────
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  // ── Voice state ────────────────────────────────────────────────────────────
+  const [isListening, setIsListening] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -178,7 +171,56 @@ export default function SoilPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
-  // ── Build soil system prompt for chat ──────────────────────────────────────
+  // ── Strip emojis/symbols for clean TTS ────────────────────────────────────
+  function cleanForSpeech(text: string): string {
+    return text
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
+      .replace(/[🌱🌿💧📅📈✅⚠️🪨🌻🌾💡→•]/g, "")
+      .replace(/[*#_~`>|]/g, "")
+      .replace(/\n+/g, ". ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  // ── Speak an AI message ────────────────────────────────────────────────────
+  function speakMessage(text: string, index: number) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    // Tap again to stop
+    if (speakingIndex === index) { setSpeakingIndex(null); return; }
+    const utterance = new SpeechSynthesisUtterance(cleanForSpeech(text));
+    utteranceRef.current = utterance;
+    utterance.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.onstart = () => setSpeakingIndex(index);
+    utterance.onend = () => setSpeakingIndex(null);
+    utterance.onerror = () => setSpeakingIndex(null);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ── Voice input (mic) ──────────────────────────────────────────────────────
+  function toggleVoiceInput() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) { alert("Voice input not supported. Please use Chrome."); return; }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    const recognition = new SR();
+    recognitionRef.current = recognition;
+    recognition.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput("");
+      sendChatWithText(transcript);
+    };
+    recognition.start();
+  }
+
+  // ── Build soil system prompt ───────────────────────────────────────────────
   const buildSoilSystemPrompt = () => {
     const langMap: Record<string, string> = { en: "English", hi: "Hindi", mr: "Marathi" };
     let sys = `You are KrishiBot, an expert Indian soil scientist and farming advisor.
@@ -196,11 +238,8 @@ Organic Matter: ${form.organicMatter}%
 Moisture: ${form.moisture}%
 Soil Type: ${form.soilType}
 Crop: ${form.crop}`;
-
     if (result) {
-      sys += `
-
-ANALYSIS RESULTS:
+      sys += `\n\nANALYSIS RESULTS:
 Score: ${result.score}/100 (${result.overallHealth})
 Warnings: ${result.warnings.join("; ")}
 Recommendations: ${result.recommendations.join("; ")}
@@ -209,31 +248,36 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
     return sys;
   };
 
-  const sendChat = async (overrideText?: string) => {
-    const text = (overrideText ?? chatInput).trim();
-    if (!text || chatLoading) return;
+  // ── Shared send function (used by text input + voice) ─────────────────────
+  const sendChatWithText = async (text: string) => {
+    if (!text.trim() || chatLoading) return;
     setChatMessages(prev => [...prev, { role: "user", text }]);
-    setChatInput("");
     setChatLoading(true);
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Your existing chat API uses "prompt" not "message"
           prompt: buildSoilSystemPrompt() + "\n\nFarmer question: " + text,
           language,
         }),
       });
       const data = await res.json();
-      // Your existing API returns { text: "..." }
-      const reply = data.text ?? data.reply ?? data.message ?? data.error ?? "No response.";
+      const reply = data.text ?? data.reply ?? data.message ?? "No response.";
       setChatMessages(prev => [...prev, { role: "assistant", text: reply }]);
     } catch {
-      setChatMessages(prev => [...prev, { role: "assistant", text: "⚠️ Something went wrong. Try again." }]);
+      setChatMessages(prev => [...prev, { role: "assistant", text: "Something went wrong. Try again." }]);
     } finally {
       setChatLoading(false);
     }
+  };
+
+  // ── Send from text input box ───────────────────────────────────────────────
+  const sendChat = async (overrideText?: string) => {
+    const text = (overrideText ?? chatInput).trim();
+    if (!text || chatLoading) return;
+    setChatInput("");
+    await sendChatWithText(text);
   };
 
   const analyze = async () => {
@@ -255,12 +299,12 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
   };
 
   const paramRows = [
-    { key: "ph",            label: t.ph,            value: form.ph,            unit: ""      },
-    { key: "nitrogen",      label: t.nitrogen,       value: form.nitrogen,      unit: " kg/ha"},
-    { key: "phosphorus",    label: t.phosphorus,     value: form.phosphorus,    unit: " kg/ha"},
-    { key: "potassium",     label: t.potassium,      value: form.potassium,     unit: " kg/ha"},
-    { key: "organicMatter", label: t.organicMatter,  value: form.organicMatter, unit: "%"     },
-    { key: "moisture",      label: t.moisture,       value: form.moisture,      unit: "%"     },
+    { key: "ph",            label: t.ph,           value: form.ph,            unit: ""       },
+    { key: "nitrogen",      label: t.nitrogen,      value: form.nitrogen,      unit: " kg/ha" },
+    { key: "phosphorus",    label: t.phosphorus,    value: form.phosphorus,    unit: " kg/ha" },
+    { key: "potassium",     label: t.potassium,     value: form.potassium,     unit: " kg/ha" },
+    { key: "organicMatter", label: t.organicMatter, value: form.organicMatter, unit: "%"      },
+    { key: "moisture",      label: t.moisture,      value: form.moisture,      unit: "%"      },
   ];
 
   const totalFertCost = result?.fertilizers?.reduce((sum, f) => sum + getFertCost(f), 0) ?? 0;
@@ -322,7 +366,7 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             </div>
           </div>
 
-          {/* 1️⃣ Nutrient Meter Bars */}
+          {/* Nutrient Meter Bars */}
           <div className="bg-card border border-border rounded-2xl p-4">
             <h2 className="text-base font-semibold text-primary mb-4">{t.params}</h2>
             <div className="space-y-3">
@@ -375,7 +419,7 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             </div>
           )}
 
-          {/* 2️⃣ Fertilizer Plan with Timing */}
+          {/* Fertilizer Plan */}
           {result.fertilizers.length > 0 && (
             <div className="bg-card border border-border rounded-2xl p-4">
               <h2 className="text-base font-semibold text-primary mb-3">🌿 {t.fertilizers}</h2>
@@ -432,7 +476,7 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             </div>
           )}
 
-          {/* 3️⃣ Irrigation Advice */}
+          {/* Irrigation Advice */}
           {result.irrigationAdvice && (
             <div className="bg-card border border-border rounded-2xl p-4">
               <h2 className="text-base font-semibold text-primary mb-3">💧 {t.irrigation}</h2>
@@ -456,7 +500,7 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             </div>
           )}
 
-          {/* 4️⃣ Soil Improvement Timeline */}
+          {/* Soil Improvement Timeline */}
           {result.improvementTimeline && result.improvementTimeline.length > 0 && (
             <div className="bg-card border border-border rounded-2xl p-4">
               <h2 className="text-base font-semibold text-primary mb-4">📅 {t.timeline}</h2>
@@ -513,7 +557,6 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
               </div>
             </div>
           )}
-
         </div>
       )}
 
@@ -527,7 +570,6 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
           ? <svg className="w-6 h-6 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
           : <svg className="w-6 h-6 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
         }
-        {/* Unread dot when closed and results available */}
         {!chatOpen && result && chatMessages.length === 0 && (
           <span className="absolute top-1 right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-background" />
         )}
@@ -554,7 +596,7 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             </button>
           </div>
 
-          {/* Context pill — shows what data the AI has */}
+          {/* Context pills */}
           <div className="flex gap-1.5 px-3 pt-2 flex-shrink-0 flex-wrap">
             <span className="text-xs bg-green-500/15 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full">
               🧪 {t.ph} {form.ph} · {form.soilType}
@@ -572,23 +614,19 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
           {/* Messages area */}
           <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2">
 
-            {/* Greeting + suggestions shown when empty */}
+            {/* Greeting + suggestions when empty */}
             {chatMessages.length === 0 && (
               <div className="space-y-2">
                 <div className="bg-secondary border border-border rounded-2xl rounded-bl-sm px-3 py-2.5 text-xs text-foreground leading-relaxed">
                   {result
-                    ? `👋 I've analysed your soil (Score: ${result.score}/100). Ask me anything about the results!`
-                    : `👋 Hi! Enter your soil values and run the analysis first, then I can give you specific advice.`
+                    ? `I have analysed your soil (Score: ${result.score}/100). Ask me anything about the results!`
+                    : `Hi! Enter your soil values and run the analysis first, then I can give you specific advice.`
                   }
                 </div>
                 <div className="grid grid-cols-1 gap-1.5 pt-1">
                   {t.chatSuggestions.map((s, i) => (
-                    <button
-                      key={i}
-                      onClick={() => sendChat(s)}
-                      disabled={chatLoading}
-                      className="text-left text-xs bg-secondary border border-border rounded-xl px-3 py-2 text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
-                    >
+                    <button key={i} onClick={() => sendChat(s)} disabled={chatLoading}
+                      className="text-left text-xs bg-secondary border border-border rounded-xl px-3 py-2 text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50">
                       {s}
                     </button>
                   ))}
@@ -596,15 +634,30 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
               </div>
             )}
 
-            {/* Messages */}
+            {/* Messages with Listen button on AI replies */}
             {chatMessages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[88%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words ${
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-secondary border border-border text-foreground rounded-bl-sm"
-                }`}>
-                  {m.text}
+                <div className={`max-w-[88%] flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
+                  <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words ${
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-sm"
+                      : "bg-secondary border border-border text-foreground rounded-bl-sm"
+                  }`}>
+                    {m.text}
+                  </div>
+                  {/* 🔊 Listen button — AI messages only */}
+                  {m.role === "assistant" && (
+                    <button
+                      onClick={() => speakMessage(m.text, i)}
+                      className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all
+                        ${speakingIndex === i
+                          ? "bg-primary/20 text-primary border-primary/40 animate-pulse"
+                          : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                        }`}
+                    >
+                      {speakingIndex === i ? "⏹ Stop" : "🔊 Listen"}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -624,13 +677,25 @@ Suitable Crops: ${result.suitableCrops.join(", ")}`;
             <div ref={chatBottomRef} />
           </div>
 
-          {/* Input row */}
+          {/* Input row — mic + text + send */}
           <div className="flex gap-2 px-3 py-3 border-t border-border flex-shrink-0 bg-card">
+            {/* 🎤 Mic button */}
+            <button
+              onClick={toggleVoiceInput}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm border transition-all
+                ${isListening
+                  ? "bg-red-500 text-white border-red-500 animate-pulse"
+                  : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                }`}
+              title={isListening ? "Stop listening" : "Speak your question"}
+            >
+              {isListening ? "⏹" : "🎤"}
+            </button>
             <input
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } }}
-              placeholder={t.chatPlaceholder}
+              placeholder={isListening ? t.listening : t.chatPlaceholder}
               disabled={chatLoading}
               className="flex-1 bg-secondary border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/60 disabled:opacity-60"
             />

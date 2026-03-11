@@ -154,6 +154,12 @@ export default function DiseasePage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
+  // ── Voice state ─────────────────────────────────────────────────────────────
+  const [isListening, setIsListening] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
   // Reset greeting when result or language changes
   useEffect(() => {
     setChatMessages([{
@@ -260,7 +266,112 @@ Prevention: ${result.prevention?.join("; ") || "—"}
     }
   }
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
+  // ── Strip emojis and symbols for TTS ───────────────────────────────────────
+  function cleanForSpeech(text: string): string {
+    return text
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "") // emojis
+      .replace(/[🌿🔬💊🧫🔍🛡️⏰✅⚠️🌾📷☀️🍃]/g, "")
+      .replace(/[•*#_~`>|]/g, "")
+      .replace(/\n+/g, ". ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  // ── Speak a message ─────────────────────────────────────────────────────────
+  function speakMessage(text: string, index: number) {
+    if (!window.speechSynthesis) return;
+
+    // Stop any current speech
+    window.speechSynthesis.cancel();
+
+    if (speakingIndex === index) {
+      setSpeakingIndex(null);
+      return;
+    }
+
+    const cleaned = cleanForSpeech(text);
+    const utterance = new SpeechSynthesisUtterance(cleaned);
+    utteranceRef.current = utterance;
+
+    // Set language for TTS
+    utterance.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+
+    utterance.onstart = () => setSpeakingIndex(index);
+    utterance.onend = () => setSpeakingIndex(null);
+    utterance.onerror = () => setSpeakingIndex(null);
+
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // ── Voice input (mic) ───────────────────────────────────────────────────────
+  function toggleVoiceInput() {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      alert("Voice input not supported on this browser. Try Chrome.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setChatInput(transcript);
+      // Auto-send after a short delay
+      setTimeout(() => {
+        setChatInput("");
+        sendChatWithText(transcript);
+      }, 400);
+    };
+
+    recognition.start();
+  }
+
+  // ── sendChat variant that accepts explicit text (needed for voice auto-send) ─
+  async function sendChatWithText(message: string) {
+    if (!message.trim() || chatLoading) return;
+    setChatMessages((prev) => [...prev, { role: "user", content: message }]);
+    setChatLoading(true);
+
+    try {
+      const ctx = buildContext();
+      const langName = language === "hi" ? "Hindi" : language === "mr" ? "Marathi" : "English";
+      const system = ctx
+        ? `You are a plant disease expert helping a farmer. The AI already analyzed their crop image:\n\n${ctx}\n\nAnswer based on this. Be concise and practical. Respond in ${langName}.`
+        : `You are a plant disease expert helping a farmer. No image analyzed yet. Help with crop diseases, pests, deficiencies. Be concise. Respond in ${langName}.`;
+
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: `${system}\n\nFarmer asks: ${message}` }),
+      });
+      const data = await res.json();
+      setChatMessages((prev) => [...prev, { role: "assistant", content: data.text ?? t.error }]);
+    } catch {
+      setChatMessages((prev) => [...prev, { role: "assistant", content: t.error }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
 
@@ -492,14 +603,29 @@ Prevention: ${result.prevention?.join("; ") || "—"}
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
             {chatMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap
-                    ${msg.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-secondary text-foreground rounded-bl-sm"
-                    }`}
-                >
-                  {msg.content}
+                <div className={`max-w-[85%] flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  <div
+                    className={`rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap
+                      ${msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-secondary text-foreground rounded-bl-sm"
+                      }`}
+                  >
+                    {msg.content}
+                  </div>
+                  {/* Listen button — only on AI messages */}
+                  {msg.role === "assistant" && (
+                    <button
+                      onClick={() => speakMessage(msg.content, i)}
+                      className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border transition-all
+                        ${speakingIndex === i
+                          ? "bg-primary/20 text-primary border-primary/40 animate-pulse"
+                          : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                        }`}
+                    >
+                      {speakingIndex === i ? "⏹ Stop" : "🔊 Listen"}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -534,13 +660,24 @@ Prevention: ${result.prevention?.join("; ") || "—"}
 
           {/* Input */}
           <div className="px-3 pb-3 pt-2 border-t border-border flex gap-2 shrink-0">
+            <button
+              onClick={toggleVoiceInput}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-sm border transition-all
+                ${isListening
+                  ? "bg-red-500 text-white border-red-500 animate-pulse"
+                  : "bg-secondary text-muted-foreground border-border hover:text-primary hover:border-primary/40"
+                }`}
+              title={isListening ? "Stop listening" : "Speak your question"}
+            >
+              {isListening ? "⏹" : "🎤"}
+            </button>
             <input
               ref={chatInputRef}
               type="text"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendChat()}
-              placeholder={t.inputPlaceholder}
+              placeholder={isListening ? (language === "hi" ? "सुन रहा हूं..." : language === "mr" ? "ऐकतोय..." : "Listening...") : t.inputPlaceholder}
               className="flex-1 bg-secondary text-foreground text-sm rounded-xl px-3 py-2
                 border border-border focus:outline-none focus:border-primary
                 placeholder:text-muted-foreground min-w-0"
