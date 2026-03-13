@@ -6,7 +6,7 @@ import {
   Newspaper, RefreshCw, ExternalLink, Clock, TrendingUp,
   Leaf, CloudRain, Bug, Wheat, AlertCircle, ArrowLeft,
   Globe, ShoppingBasket, TrendingDown, Minus, Search, MapPin,
-  MessageCircle, X, Send,
+  X, Send,
 } from "lucide-react"
 import { useApp } from "@/lib/app-context"
 import { cn } from "@/lib/utils"
@@ -62,7 +62,6 @@ const commodityCategories = [
   { key: "crop",      label: { en: "Crops",      hi: "फसलें",     mr: "पिके"   }, keywords: ["Wheat","Rice","Soybean","Cotton","Maize","Jowar","Bajra","Tur","Gram","Moong","Urad","Groundnut","Sunflower"] },
 ]
 
-// ── Chat suggestions by tab ───────────────────────────────────────────────────
 const CHAT_SUGGESTIONS: Record<string, Record<string, string[]>> = {
   news: {
     en: ["Summarize today's farming news", "What's affecting crop prices?", "Any pest alerts this season?", "Government schemes for farmers?"],
@@ -80,6 +79,195 @@ function cleanForSpeech(text: string): string {
   return text.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").replace(/[*#_~`>|→•]/g, "").replace(/\n+/g, ". ").trim()
 }
 
+// ── KrishiBot Avatar — big, cursor-tracking, glowing eyes ─────────────────────
+function KrishiRobotAvatar({
+  size = 72,
+  chatOpen = false,
+  hasNotification = false,
+}: {
+  size?: number
+  chatOpen?: boolean
+  hasNotification?: boolean
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 })
+  const [isBlinking, setIsBlinking] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!svgRef.current) return
+      const rect = svgRef.current.getBoundingClientRect()
+      const angle = Math.atan2(
+        e.clientY - (rect.top + rect.height / 2),
+        e.clientX - (rect.left + rect.width / 2)
+      )
+      const d = 4.5
+      setEyeOffset({ x: Math.cos(angle) * d, y: Math.sin(angle) * d })
+    }
+    window.addEventListener("mousemove", onMove)
+    return () => window.removeEventListener("mousemove", onMove)
+  }, [])
+
+  useEffect(() => {
+    const blink = () => {
+      setIsBlinking(true)
+      setTimeout(() => setIsBlinking(false), 140)
+      setTimeout(blink, 2800 + Math.random() * 3500)
+    }
+    const t = setTimeout(blink, 2000)
+    return () => clearTimeout(t)
+  }, [])
+
+  const LEX = 46, LEY = 52
+  const REX = 74, REY = 52
+  const lx = chatOpen ? LEX : LEX + eyeOffset.x
+  const ly = chatOpen ? LEY : LEY + eyeOffset.y
+  const rx = chatOpen ? REX : REX + eyeOffset.x
+  const ry = chatOpen ? REY : REY + eyeOffset.y
+
+  const borderColor = chatOpen ? "#f97316" : "#22c55e"
+  const glowColor   = chatOpen ? "rgba(249,115,22,0.75)" : "rgba(34,197,94,0.6)"
+  const eyeRingColor = chatOpen ? "#f97316" : "#aaee00"
+  const irisColor    = chatOpen ? "#ff6600" : "#bbee00"
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg
+        ref={svgRef}
+        width={size}
+        height={size}
+        viewBox="0 0 120 120"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{
+          cursor: "pointer",
+          transition: "transform 0.25s, filter 0.25s",
+          transform: hovered ? "scale(1.08)" : "scale(1)",
+          filter: `drop-shadow(0 0 ${hovered ? "20px" : "9px"} ${glowColor})`,
+          display: "block",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setHovered(false); setEyeOffset({ x: 0, y: 0 }) }}
+      >
+        <defs>
+          <clipPath id="kb-news-circ"><circle cx="60" cy="60" r="58" /></clipPath>
+          <radialGradient id="kb-news-sky" cx="50%" cy="60%" r="55%">
+            <stop offset="0%" stopColor="#f5c842" />
+            <stop offset="60%" stopColor="#a8d448" />
+            <stop offset="100%" stopColor="#3a7d1e" />
+          </radialGradient>
+          <radialGradient id="kb-news-helm" cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stopColor="#6dbe2e" />
+            <stop offset="70%" stopColor="#2d7a0a" />
+            <stop offset="100%" stopColor="#1a4f05" />
+          </radialGradient>
+          <radialGradient id="kb-news-body" cx="40%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#3a3a3a" />
+            <stop offset="100%" stopColor="#0d0d0d" />
+          </radialGradient>
+          <radialGradient id="kb-news-iris" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffff66" />
+            <stop offset="45%" stopColor={irisColor} />
+            <stop offset="100%" stopColor="#336600" />
+          </radialGradient>
+        </defs>
+
+        {/* Outer ring */}
+        <circle cx="60" cy="60" r="59" fill="#1a1a1a" stroke={borderColor} strokeWidth="2.5" />
+
+        <g clipPath="url(#kb-news-circ)">
+          {/* Farm background */}
+          <rect x="0" y="0" width="120" height="120" fill="url(#kb-news-sky)" />
+          <ellipse cx="60" cy="110" rx="70" ry="28" fill="#3a7d1e" />
+          <ellipse cx="60" cy="106" rx="56" ry="18" fill="#4a9a24" />
+          {/* Trees */}
+          <ellipse cx="17" cy="79" rx="12" ry="14" fill="#2d6e10" />
+          <rect x="14" y="86" width="6" height="10" fill="#5a3010" />
+          <ellipse cx="103" cy="79" rx="12" ry="14" fill="#2d6e10" />
+          <rect x="100" y="86" width="6" height="10" fill="#5a3010" />
+          {/* WiFi arcs */}
+          <path d="M28 44 Q22 38 26 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+          <path d="M24 48 Q14 39 20 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+          <path d="M92 44 Q98 38 94 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+          <path d="M96 48 Q106 39 100 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+          {/* Body + arms */}
+          <rect x="38" y="72" width="44" height="34" rx="10" fill="url(#kb-news-body)" stroke="#222" strokeWidth="1" />
+          <rect x="22" y="74" width="18" height="28" rx="9" fill="url(#kb-news-body)" stroke="#222" strokeWidth="1" />
+          <rect x="80" y="74" width="18" height="28" rx="9" fill="url(#kb-news-body)" stroke="#222" strokeWidth="1" />
+          {/* Hands */}
+          <ellipse cx="31" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+          <ellipse cx="89" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+          {/* Soil + seedling */}
+          <ellipse cx="60" cy="104" rx="18" ry="8" fill="#6b3a1f" />
+          <ellipse cx="60" cy="101" rx="14" ry="5" fill="#7c4a25" />
+          <rect x="58.5" y="84" width="3" height="18" rx="1.5" fill="#2d7a0a" />
+          <ellipse cx="52" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(-30 52 86)" />
+          <ellipse cx="68" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(30 68 86)" />
+          {/* Neck */}
+          <rect x="52" y="60" width="16" height="14" rx="4" fill="#1e1e1e" />
+          {/* Helmet dome */}
+          <ellipse cx="60" cy="50" rx="28" ry="30" fill="url(#kb-news-helm)" stroke="#1a5c0a" strokeWidth="1.5" />
+          <ellipse cx="52" cy="36" rx="8" ry="5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 52 36)" />
+          {/* Visor band */}
+          <ellipse cx="60" cy="60" rx="28" ry="7" fill="#111" stroke="#1a5c0a" strokeWidth="1.2" />
+          <ellipse cx="60" cy="59" rx="22" ry="5" fill="#0d1a0d" opacity="0.85" />
+          {/* Top leaf */}
+          <rect x="58.5" y="20" width="3" height="10" rx="1.5" fill="#2d7a0a" />
+          <ellipse cx="60" cy="18" rx="7" ry="5" fill="#4ade80" transform="rotate(-15 60 18)" />
+
+          {/* ── EYES ── big whites */}
+          <circle cx={LEX} cy={LEY} r="9.5" fill="white" />
+          <circle cx={REX} cy={REY} r="9.5" fill="white" />
+          <circle cx={LEX} cy={LEY} r="9.5" fill="none" stroke={eyeRingColor} strokeWidth="1.8" opacity="0.6" />
+          <circle cx={REX} cy={REY} r="9.5" fill="none" stroke={eyeRingColor} strokeWidth="1.8" opacity="0.6" />
+
+          {chatOpen ? (
+            /* X eyes when chat is open */
+            <>
+              <line x1={LEX-5} y1={LEY-5} x2={LEX+5} y2={LEY+5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={LEX+5} y1={LEY-5} x2={LEX-5} y2={LEY+5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={REX-5} y1={REY-5} x2={REX+5} y2={REY+5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={REX+5} y1={REY-5} x2={REX-5} y2={REY+5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+            </>
+          ) : !isBlinking ? (
+            /* Cursor-tracking pupils */
+            <>
+              <circle cx={lx} cy={ly} r="6" fill="url(#kb-news-iris)" />
+              <circle cx={rx} cy={ry} r="6" fill="url(#kb-news-iris)" />
+              {/* Dark pupil center */}
+              <circle cx={lx} cy={ly} r="2.5" fill="#1a3300" opacity="0.75" />
+              <circle cx={rx} cy={ry} r="2.5" fill="#1a3300" opacity="0.75" />
+              {/* Shine dots */}
+              <circle cx={lx - 2.5} cy={ly - 2.5} r="2.2" fill="white" opacity="0.85" />
+              <circle cx={rx - 2.5} cy={ry - 2.5} r="2.2" fill="white" opacity="0.85" />
+            </>
+          ) : (
+            /* Blink */
+            <>
+              <ellipse cx={LEX} cy={LEY} rx="6" ry="1.2" fill="#ccee00" />
+              <ellipse cx={REX} cy={REY} rx="6" ry="1.2" fill="#ccee00" />
+            </>
+          )}
+        </g>
+
+        {/* Logo swoosh */}
+        <path d="M10 112 Q40 100 60 108 Q80 116 110 104" stroke="#f97316" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d="M10 115 Q40 103 60 111 Q80 119 110 107" stroke="#22c55e" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity="0.55" />
+        {/* Border rings */}
+        <circle cx="60" cy="60" r="58" fill="none" stroke={borderColor} strokeWidth="2" opacity="0.85" />
+        <circle cx="60" cy="60" r="55" fill="none" stroke="#4ade80" strokeWidth="0.8" opacity="0.35" />
+      </svg>
+
+      {/* Notification dot */}
+      {hasNotification && !chatOpen && (
+        <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-background animate-pulse" />
+      )}
+    </div>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function NewsPage() {
   const { language } = useApp()
   const [mainTab, setMainTab] = useState<"news" | "mandi">("news")
@@ -103,7 +291,7 @@ export default function NewsPage() {
   const [mandiSource, setMandiSource] = useState("")
   const [mandiSourceUrl, setMandiSourceUrl] = useState("https://vegetablemarketprice.com/market/maharashtra/today")
 
-  // ── Chat state ─────────────────────────────────────────────────────────────
+  // Chat state
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([])
   const [chatInput, setChatInput] = useState("")
@@ -117,10 +305,7 @@ export default function NewsPage() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [chatMessages, chatLoading])
 
-  // ── Reset chat messages when tab changes ──────────────────────────────────
-  useEffect(() => {
-    setChatMessages([])
-  }, [mainTab])
+  useEffect(() => { setChatMessages([]) }, [mainTab])
 
   const t = useCallback((en: string, hi: string, mr: string) => {
     if (language === "hi") return hi
@@ -136,14 +321,11 @@ export default function NewsPage() {
     return "en"
   }, [language])
 
-  // ── Build context-aware system prompt ─────────────────────────────────────
   const buildSystemPrompt = useCallback(() => {
     const langMap: Record<string, string> = { en: "English", hi: "Hindi", mr: "Marathi" }
     const lang = langMap[language] ?? "English"
-
     let ctx = `You are KrishiBot, an expert Indian farming assistant embedded in a News & Mandi Prices page.
 Always respond in ${lang}. Be concise (under 150 words). Be practical and specific for Indian farmers. Use relevant emojis (📰🌾💰⚠️✅📈) to make responses friendly and easy to read.`
-
     if (mainTab === "news") {
       ctx += `\n\nCONTEXT: The farmer is reading farming news. Current category: "${activeCategory}".`
       if (news.length > 0) {
@@ -165,7 +347,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     return ctx
   }, [language, mainTab, activeCategory, news, selectedArticle, selectedDistrict, mandiData])
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
   function speakMessage(text: string, index: number) {
     if (!window.speechSynthesis) return
     window.speechSynthesis.cancel()
@@ -179,7 +360,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     window.speechSynthesis.speak(utterance)
   }
 
-  // ── Voice input ───────────────────────────────────────────────────────────
   function toggleVoiceInput() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) { alert("Voice input not supported. Use Chrome."); return }
@@ -199,7 +379,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     recognition.start()
   }
 
-  // ── Send chat ─────────────────────────────────────────────────────────────
   const sendChatWithText = async (text: string) => {
     if (!text.trim() || chatLoading) return
     setChatMessages(prev => [...prev, { role: "user", text }])
@@ -208,10 +387,7 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: buildSystemPrompt() + "\n\nFarmer question: " + text,
-          language,
-        }),
+        body: JSON.stringify({ prompt: buildSystemPrompt() + "\n\nFarmer question: " + text, language }),
       })
       const data = await res.json()
       const reply = data.text ?? data.reply ?? data.message ?? "No response."
@@ -230,7 +406,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     await sendChatWithText(text)
   }
 
-  // ── Fetch news ────────────────────────────────────────────────────────────
   const fetchNews = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setNewsRefreshing(true)
     else setNewsLoading(true)
@@ -261,11 +436,8 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     }
   }, [activeCategory, getLangCode])
 
-  useEffect(() => {
-    if (mainTab === "news") fetchNews()
-  }, [fetchNews, mainTab])
+  useEffect(() => { if (mainTab === "news") fetchNews() }, [fetchNews, mainTab])
 
-  // ── Fetch mandi ───────────────────────────────────────────────────────────
   const fetchMandi = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setMandiRefreshing(true)
     else setMandiLoading(true)
@@ -288,9 +460,7 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     }
   }, [selectedDistrict])
 
-  useEffect(() => {
-    if (mainTab === "mandi") fetchMandi()
-  }, [fetchMandi, mainTab])
+  useEffect(() => { if (mainTab === "mandi") fetchMandi() }, [fetchMandi, mainTab])
 
   const formatDate = (dateStr: string) => {
     try {
@@ -321,26 +491,22 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
 
   const suggestions = CHAT_SUGGESTIONS[mainTab]?.[language] ?? CHAT_SUGGESTIONS[mainTab]?.en ?? []
 
-  // ── Chat popup JSX ────────────────────────────────────────────────────────
+  // ── Chat popup ─────────────────────────────────────────────────────────────
   const chatPopup = (
     <>
-      {/* Floating button */}
+      {/* ✅ KrishiBot avatar as floating button — size 72 so eyes are clearly visible */}
       <button
         onClick={() => setChatOpen(o => !o)}
-        className="fixed bottom-20 right-4 z-50 w-14 h-14 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center transition-all active:scale-95"
-        aria-label="Open chat"
+        className="fixed bottom-20 right-4 z-50 transition-all active:scale-95"
+        aria-label="Open KrishiBot chat"
       >
-        {chatOpen
-          ? <X className="w-6 h-6 text-primary-foreground" />
-          : <MessageCircle className="w-6 h-6 text-primary-foreground" />
-        }
-        {/* Dot when news is loaded and chat not opened yet */}
-        {!chatOpen && (news.length > 0 || mandiData.length > 0) && chatMessages.length === 0 && (
-          <span className="absolute top-1 right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-background animate-pulse" />
-        )}
+        <KrishiRobotAvatar
+          size={72}
+          chatOpen={chatOpen}
+          hasNotification={!chatOpen && (news.length > 0 || mandiData.length > 0) && chatMessages.length === 0}
+        />
       </button>
 
-      {/* Chat popup */}
       {chatOpen && (
         <div
           className="fixed bottom-36 right-4 z-50 flex flex-col bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
@@ -348,9 +514,8 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-secondary flex-shrink-0">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-              {mainTab === "news" ? <Newspaper className="w-4 h-4 text-primary" /> : <ShoppingBasket className="w-4 h-4 text-primary" />}
-            </div>
+            {/* Mini avatar in chat header */}
+            <KrishiRobotAvatar size={32} chatOpen={false} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-primary leading-tight">
                 {mainTab === "news"
@@ -404,16 +569,12 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
                         ? t(`I've loaded ${news.length} farming news articles. Ask me anything!`,
                             `मैंने ${news.length} कृषि समाचार लोड किए हैं। कुछ भी पूछें!`,
                             `मी ${news.length} कृषी बातम्या लोड केल्या आहेत. काहीही विचारा!`)
-                        : t("Load some news first, then ask me about it!",
-                            "पहले समाचार लोड करें, फिर पूछें!",
-                            "आधी बातम्या लोड करा, मग विचारा!"))
+                        : t("Load some news first, then ask me about it!", "पहले समाचार लोड करें, फिर पूछें!", "आधी बातम्या लोड करा, मग विचारा!"))
                     : (mandiData.length > 0
                         ? t(`I have live mandi prices for ${selectedDistrict}. Ask me about any crop price!`,
                             `मेरे पास ${selectedDistrict} के लाइव मंडी भाव हैं। किसी भी फसल का भाव पूछें!`,
                             `माझ्याकडे ${selectedDistrict} चे लाइव्ह मंडी भाव आहेत. कोणत्याही पिकाचा भाव विचारा!`)
-                        : t("Load mandi data first, then ask me!",
-                            "पहले मंडी डेटा लोड करें, फिर पूछें!",
-                            "आधी मंडी डेटा लोड करा, मग विचारा!"))}
+                        : t("Load mandi data first, then ask me!", "पहले मंडी डेटा लोड करें, फिर पूछें!", "आधी मंडी डेटा लोड करा, मग विचारा!"))}
                 </div>
                 <div className="grid grid-cols-1 gap-1.5 pt-1">
                   {suggestions.map((s, i) => (
@@ -429,16 +590,17 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
             {chatMessages.map((m, i) => (
               <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[88%] flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
+                  {m.role === "assistant" && (
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <KrishiRobotAvatar size={18} chatOpen={false} />
+                      <span className="text-[10px] text-primary font-medium">KrishiBot</span>
+                    </div>
+                  )}
                   <div className={`rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words ${
                     m.role === "user"
                       ? "bg-primary text-primary-foreground rounded-br-sm"
                       : "bg-secondary border border-border text-foreground rounded-bl-sm"
                   }`}>
-                    {m.role === "assistant" && (
-                      <div className="flex items-center gap-1 text-[10px] text-primary mb-1 font-medium">
-                        <Leaf className="w-3 h-3" /> KrishiBot
-                      </div>
-                    )}
                     {m.text}
                   </div>
                   {m.role === "assistant" && (
@@ -472,7 +634,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
 
           {/* Input row */}
           <div className="flex gap-2 px-3 py-3 border-t border-border flex-shrink-0 bg-card">
-            {/* Mic button */}
             <button onClick={toggleVoiceInput}
               className={cn(
                 "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-sm border transition-all",
@@ -506,7 +667,7 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
     </>
   )
 
-  // ── Article reader view ───────────────────────────────────────────────────
+  // ── Article reader view ────────────────────────────────────────────────────
   if (selectedArticle) {
     return (
       <div className="flex flex-col min-h-screen pb-20 md:pb-6">
@@ -551,14 +712,14 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
           ) : (
             <div className="bg-secondary/50 rounded-xl p-4 text-center mt-4">
               <p className="text-sm text-muted-foreground mb-3">{t("Visit the original source to read the full article","पूरा लेख पढ़ने के लिए मूल स्रोत पर जाएं","संपूर्ण लेख वाचण्यासाठी मूळ स्रोतावर जा")}</p>
-              <a href={selectedArticle.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
+              <a href={selectedArticle.link} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors">
                 <ExternalLink className="h-3.5 w-3.5" />
                 {t("Read Full Article","पूरा लेख पढ़ें","संपूर्ण लेख वाचा")}
               </a>
             </div>
           )}
         </div>
-        {/* Chat available in article view too */}
         {chatPopup}
       </div>
     )
@@ -572,15 +733,11 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
         <div className="flex items-center px-4 pt-3 pb-0 justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-              {mainTab === "news"
-                ? <Newspaper className="h-4 w-4 text-primary" />
-                : <ShoppingBasket className="h-4 w-4 text-primary" />}
+              {mainTab === "news" ? <Newspaper className="h-4 w-4 text-primary" /> : <ShoppingBasket className="h-4 w-4 text-primary" />}
             </div>
             <div>
               <h1 className="text-base font-bold text-foreground">
-                {mainTab === "news"
-                  ? t("Krishi News","कृषि समाचार","कृषी बातम्या")
-                  : t("Mandi Prices","मंडी भाव","मंडी भाव")}
+                {mainTab === "news" ? t("Krishi News","कृषि समाचार","कृषी बातम्या") : t("Mandi Prices","मंडी भाव","मंडी भाव")}
               </h1>
               <p className="text-[10px] text-muted-foreground">
                 {mainTab === "news"
@@ -591,15 +748,12 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
               </p>
             </div>
           </div>
-          <button
-            onClick={() => mainTab === "news" ? fetchNews(true) : fetchMandi(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary transition-colors"
-          >
+          <button onClick={() => mainTab === "news" ? fetchNews(true) : fetchMandi(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-secondary transition-colors">
             <RefreshCw className={cn("h-4 w-4 text-muted-foreground", (newsRefreshing || mandiRefreshing) && "animate-spin")} />
           </button>
         </div>
 
-        {/* Tab switch */}
         <div className="flex px-4 mt-2 gap-1 border-b border-border">
           <button onClick={() => setMainTab("news")}
             className={cn("flex items-center gap-1.5 px-4 py-2 text-xs font-semibold border-b-2 transition-colors",
@@ -613,7 +767,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
           </button>
         </div>
 
-        {/* News filters */}
         {mainTab === "news" && (
           <div className="flex gap-2 overflow-x-auto px-4 py-2">
             {newsCategories.map((cat) => (
@@ -628,7 +781,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
           </div>
         )}
 
-        {/* Mandi filters */}
         {mainTab === "mandi" && (
           <div className="px-4 py-2 space-y-2">
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -741,7 +893,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
               </button>
             </div>
           )}
-
           {!mandiLoading && !mandiError && (
             <>
               <div className="flex items-center justify-between mb-3">
@@ -815,7 +966,6 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
               )}
             </>
           )}
-
           {!mandiLoading && !mandiError && (
             <div className="mt-4 pt-3 border-t border-border">
               <a href={mandiSourceUrl} target="_blank" rel="noopener noreferrer"
@@ -834,7 +984,7 @@ Always respond in ${lang}. Be concise (under 150 words). Be practical and specif
         </div>
       )}
 
-      {/* ── Floating Chat ── */}
+      {/* ── Floating KrishiBot Chat ── */}
       {chatPopup}
 
     </div>
