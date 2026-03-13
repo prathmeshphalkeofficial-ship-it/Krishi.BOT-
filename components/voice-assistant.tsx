@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import {
-  Mic, MicOff, Volume2, Loader2, Leaf, Power, HelpCircle,
+  Mic, MicOff, Volume2, Loader2, Power, HelpCircle,
   Search, AlertCircle, Zap, Globe, Newspaper, Calculator,
   Heart, StopCircle, Navigation, Droplets, FlaskConical,
   Bug, CloudSun, ShoppingCart,
@@ -85,6 +85,183 @@ function cleanForSpeech(text: string): string {
     .trim()
 }
 
+// ── KrishiBot Circular Avatar with cursor-tracking eyes ───────────────────────
+function KrishiRobotAvatar({
+  size = 48,
+  voiceState = "idle",
+}: {
+  size?: number
+  voiceState?: VoiceState
+}) {
+  const svgRef = useRef<SVGSVGElement>(null)
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 })
+  const [isBlinking, setIsBlinking] = useState(false)
+  const [hovered, setHovered] = useState(false)
+
+  // Cursor tracking
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!svgRef.current) return
+      const rect = svgRef.current.getBoundingClientRect()
+      const angle = Math.atan2(e.clientY - (rect.top + rect.height / 2), e.clientX - (rect.left + rect.width / 2))
+      const d = 3.2
+      setEyeOffset({ x: Math.cos(angle) * d, y: Math.sin(angle) * d })
+    }
+    window.addEventListener("mousemove", onMove)
+    return () => window.removeEventListener("mousemove", onMove)
+  }, [])
+
+  // Auto blink
+  useEffect(() => {
+    const blink = () => {
+      setIsBlinking(true)
+      setTimeout(() => setIsBlinking(false), 130)
+      setTimeout(blink, 3000 + Math.random() * 3500)
+    }
+    const t = setTimeout(blink, 2500)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Eye color reacts to voice state
+  const eyeColor = voiceState === "listening"
+    ? "#00ff88"
+    : voiceState === "speaking"
+    ? "#44ff44"
+    : voiceState === "processing"
+    ? "#ffcc00"
+    : "#ccee00"
+
+  const glowColor = voiceState === "listening"
+    ? "rgba(0,255,136,0.75)"
+    : voiceState === "speaking"
+    ? "rgba(34,197,94,0.75)"
+    : voiceState === "processing"
+    ? "rgba(255,200,0,0.6)"
+    : "rgba(34,197,94,0.4)"
+
+  const LEX = 46, LEY = 52
+  const REX = 74, REY = 52
+
+  return (
+    <svg
+      ref={svgRef}
+      width={size}
+      height={size}
+      viewBox="0 0 120 120"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{
+        cursor: "pointer",
+        transition: "transform 0.25s, filter 0.25s",
+        transform: hovered ? "scale(1.12)" : "scale(1)",
+        filter: `drop-shadow(0 0 ${hovered ? "14px" : "6px"} ${glowColor})`,
+        flexShrink: 0,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => { setHovered(false); setEyeOffset({ x: 0, y: 0 }) }}
+    >
+      <defs>
+        <clipPath id="kb-circ"><circle cx="60" cy="60" r="58" /></clipPath>
+        <radialGradient id="kb-sky" cx="50%" cy="60%" r="55%">
+          <stop offset="0%" stopColor="#f5c842" />
+          <stop offset="60%" stopColor="#a8d448" />
+          <stop offset="100%" stopColor="#3a7d1e" />
+        </radialGradient>
+        <radialGradient id="kb-helmet" cx="40%" cy="35%" r="65%">
+          <stop offset="0%" stopColor="#6dbe2e" />
+          <stop offset="70%" stopColor="#2d7a0a" />
+          <stop offset="100%" stopColor="#1a4f05" />
+        </radialGradient>
+        <radialGradient id="kb-body" cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="#3a3a3a" />
+          <stop offset="100%" stopColor="#0d0d0d" />
+        </radialGradient>
+        <radialGradient id="kb-eye" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="40%" stopColor={eyeColor} />
+          <stop offset="100%" stopColor="#669900" />
+        </radialGradient>
+      </defs>
+
+      {/* Outer circle */}
+      <circle cx="60" cy="60" r="59" fill="#1a1a1a" stroke="#22c55e" strokeWidth="2.5" />
+
+      <g clipPath="url(#kb-circ)">
+        {/* Farm background */}
+        <rect x="0" y="0" width="120" height="120" fill="url(#kb-sky)" />
+        <ellipse cx="60" cy="110" rx="70" ry="28" fill="#3a7d1e" />
+        <ellipse cx="60" cy="106" rx="56" ry="18" fill="#4a9a24" />
+        {/* Trees */}
+        <ellipse cx="17" cy="79" rx="12" ry="14" fill="#2d6e10" />
+        <rect x="14" y="86" width="6" height="10" fill="#5a3010" />
+        <ellipse cx="103" cy="79" rx="12" ry="14" fill="#2d6e10" />
+        <rect x="100" y="86" width="6" height="10" fill="#5a3010" />
+        {/* WiFi arcs */}
+        <path d="M28 44 Q22 38 26 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+        <path d="M24 48 Q14 39 20 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+        <path d="M92 44 Q98 38 94 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+        <path d="M96 48 Q106 39 100 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+        {/* Body + arms */}
+        <rect x="38" y="72" width="44" height="34" rx="10" fill="url(#kb-body)" stroke="#222" strokeWidth="1" />
+        <rect x="22" y="74" width="18" height="28" rx="9" fill="url(#kb-body)" stroke="#222" strokeWidth="1" />
+        <rect x="80" y="74" width="18" height="28" rx="9" fill="url(#kb-body)" stroke="#222" strokeWidth="1" />
+        {/* Hands */}
+        <ellipse cx="31" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+        <ellipse cx="89" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+        {/* Soil + seedling */}
+        <ellipse cx="60" cy="104" rx="18" ry="8" fill="#6b3a1f" />
+        <ellipse cx="60" cy="101" rx="14" ry="5" fill="#7c4a25" />
+        <rect x="58.5" y="84" width="3" height="18" rx="1.5" fill="#2d7a0a" />
+        <ellipse cx="52" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(-30 52 86)" />
+        <ellipse cx="68" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(30 68 86)" />
+        {/* Neck */}
+        <rect x="52" y="60" width="16" height="14" rx="4" fill="#1e1e1e" />
+        {/* Helmet */}
+        <ellipse cx="60" cy="50" rx="28" ry="30" fill="url(#kb-helmet)" stroke="#1a5c0a" strokeWidth="1.5" />
+        <ellipse cx="52" cy="36" rx="8" ry="5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 52 36)" />
+        <ellipse cx="60" cy="60" rx="28" ry="7" fill="#111" stroke="#1a5c0a" strokeWidth="1.2" />
+        <ellipse cx="60" cy="59" rx="22" ry="5" fill="#0d1a0d" opacity="0.85" />
+        {/* Top leaf */}
+        <rect x="58.5" y="20" width="3" height="10" rx="1.5" fill="#2d7a0a" />
+        <ellipse cx="60" cy="18" rx="7" ry="5" fill="#4ade80" transform="rotate(-15 60 18)" />
+        {/* Eyes white */}
+        <circle cx={LEX} cy={LEY} r="8" fill="white" />
+        <circle cx={REX} cy={REY} r="8" fill="white" />
+        <circle cx={LEX} cy={LEY} r="8" fill="none" stroke={eyeColor} strokeWidth="1.5" opacity="0.55" />
+        <circle cx={REX} cy={REY} r="8" fill="none" stroke={eyeColor} strokeWidth="1.5" opacity="0.55" />
+        {/* Pupils — cursor tracked */}
+        {!isBlinking ? (
+          <>
+            <circle cx={LEX + eyeOffset.x} cy={LEY + eyeOffset.y} r="5" fill="url(#kb-eye)" />
+            <circle cx={REX + eyeOffset.x} cy={REY + eyeOffset.y} r="5" fill="url(#kb-eye)" />
+            <circle cx={LEX + eyeOffset.x - 2} cy={LEY + eyeOffset.y - 2} r="1.8" fill="white" opacity="0.75" />
+            <circle cx={REX + eyeOffset.x - 2} cy={REY + eyeOffset.y - 2} r="1.8" fill="white" opacity="0.75" />
+          </>
+        ) : (
+          <>
+            <ellipse cx={LEX} cy={LEY} rx="5" ry="1" fill={eyeColor} />
+            <ellipse cx={REX} cy={REY} rx="5" ry="1" fill={eyeColor} />
+          </>
+        )}
+      </g>
+
+      {/* Swoosh */}
+      <path d="M10 112 Q40 100 60 108 Q80 116 110 104" stroke="#f97316" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.85" />
+      <path d="M10 115 Q40 103 60 111 Q80 119 110 107" stroke="#22c55e" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity="0.55" />
+      {/* Border rings */}
+      <circle cx="60" cy="60" r="58" fill="none" stroke="#22c55e" strokeWidth="2" opacity="0.8" />
+      <circle cx="60" cy="60" r="56" fill="none" stroke="#4ade80" strokeWidth="0.5" opacity="0.3" />
+
+      {/* Listening pulse ring */}
+      {voiceState === "listening" && (
+        <circle cx="60" cy="60" r="58" fill="none" stroke="#00ff88" strokeWidth="3" opacity="0.6" strokeDasharray="8 6">
+          <animateTransform attributeName="transform" type="rotate" from="0 60 60" to="360 60 60" dur="3s" repeatCount="indefinite" />
+        </circle>
+      )}
+    </svg>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 export function VoiceAssistant() {
   const { language, setIsMotorOn } = useApp()
@@ -95,22 +272,20 @@ export function VoiceAssistant() {
   const [textInput, setTextInput] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isMotorOn, setLocalMotorOn] = useState(false)
-  const [wakeMode, setWakeMode] = useState(false) // continuous wake-word listening
+  const [wakeMode, setWakeMode] = useState(false)
   const [navMessage, setNavMessage] = useState<string | null>(null)
   const [speakingId, setSpeakingId] = useState<string | null>(null)
 
-  // ── Get GPS coords (cached) ────────────────────────────────────────────────
   const coordsRef = useRef<{ lat: number; lon: number } | null>(null)
 
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => { coordsRef.current = { lat: pos.coords.latitude, lon: pos.coords.longitude } },
-        () => { /* silently fail — route uses Pune default */ }
+        () => { }
       )
     }
   }, [])
-
 
   const recognitionRef = useRef<SpeechRecognition | null>(null)
   const wakeRecognitionRef = useRef<SpeechRecognition | null>(null)
@@ -127,7 +302,6 @@ export function VoiceAssistant() {
     }
   }, [conversation])
 
-  // ── TTS ───────────────────────────────────────────────────────────────────
   const speakText = useCallback((text: string, id?: string): Promise<void> => {
     return new Promise((resolve) => {
       if (typeof window === "undefined" || !("speechSynthesis" in window)) { resolve(); return }
@@ -146,10 +320,8 @@ export function VoiceAssistant() {
     })
   }, [language])
 
-  // ── Check for nav commands in transcript ──────────────────────────────────
   const checkNavCommand = useCallback((text: string): boolean => {
     const lower = text.toLowerCase()
-    // Must contain "open" or "go to" or "show" or similar navigation intent
     const hasNavIntent = ["open", "go to", "show", "खोलो", "जाओ", "उघडा", "दाखव"].some(w => lower.includes(w))
     if (!hasNavIntent) return false
     for (const nav of NAV_COMMANDS) {
@@ -164,17 +336,12 @@ export function VoiceAssistant() {
     return false
   }, [language, router, speakText])
 
-  // ── Process command through AI ────────────────────────────────────────────
   const processCommand = useCallback(async (text: string) => {
     setState("processing")
     setError(null)
-
-    // Check navigation first
     if (checkNavCommand(text)) { setState("idle"); return }
-
     const userEntry: ConversationEntry = { id: `user-${Date.now()}`, role: "user", text, timestamp: new Date() }
     setConversation(prev => [...prev, userEntry])
-
     try {
       abortRef.current = new AbortController()
       const res = await fetch("/api/voice", {
@@ -186,15 +353,12 @@ export function VoiceAssistant() {
       if (!res.ok) throw new Error(`API error: ${res.status}`)
       const data = await res.json()
       const responseText: string = data.text || "Could not process. Please try again."
-
       if (responseText.includes("[MOTOR_ON]")) { setIsMotorOn(true); setLocalMotorOn(true) }
       if (responseText.includes("[MOTOR_OFF]")) { setIsMotorOn(false); setLocalMotorOn(false) }
-
       const clean = responseText.replace(/\[MOTOR_ON\]/g, "").replace(/\[MOTOR_OFF\]/g, "").trim()
       const aiId = `ai-${Date.now()}`
       const aiEntry: ConversationEntry = { id: aiId, role: "assistant", text: clean, timestamp: new Date() }
       setConversation(prev => [...prev, aiEntry])
-
       setState("speaking")
       await speakText(clean, aiId)
       setState("idle")
@@ -206,7 +370,6 @@ export function VoiceAssistant() {
     }
   }, [language, setIsMotorOn, speakText, checkNavCommand])
 
-  // ── Start listening ───────────────────────────────────────────────────────
   const startListening = useCallback(() => {
     const SR = getSpeechRecognition()
     if (!SR) return
@@ -238,7 +401,6 @@ export function VoiceAssistant() {
     } catch { setState("idle") }
   }, [language, processCommand])
 
-  // ── Wake word mode — continuous background listening ──────────────────────
   const startWakeMode = useCallback(() => {
     const SR = getSpeechRecognition()
     if (!SR || wakeMode) return
@@ -254,16 +416,14 @@ export function VoiceAssistant() {
       const transcript = last[0].transcript.toLowerCase()
       const hasWake = WAKE_WORDS.some(w => transcript.includes(w))
       if (hasWake && last.isFinal) {
-        // Strip wake word and process the rest
         let query = transcript
         WAKE_WORDS.forEach(w => { query = query.replace(w, "").trim() })
         if (query.length > 2) processCommand(query)
-        else startListening() // wake word only → start manual listening
+        else startListening()
       }
     }
     recognition.onerror = () => { setWakeMode(false); wakeRecognitionRef.current = null }
     recognition.onend = () => {
-      // Restart if still in wake mode
       if (wakeMode) {
         try { recognition.start() } catch { setWakeMode(false) }
       }
@@ -273,14 +433,13 @@ export function VoiceAssistant() {
 
   const stopWakeMode = useCallback(() => {
     setWakeMode(false)
-    try { wakeRecognitionRef.current?.stop() } catch { /* */ }
+    try { wakeRecognitionRef.current?.stop() } catch { }
     wakeRecognitionRef.current = null
   }, [])
 
-  // ── Main button handler ───────────────────────────────────────────────────
   const handleMainButton = useCallback(() => {
     if (state === "listening") {
-      try { recognitionRef.current?.stop() } catch { /* */ }
+      try { recognitionRef.current?.stop() } catch { }
       recognitionRef.current = null
       setState("idle")
     } else if (state === "speaking") {
@@ -323,14 +482,17 @@ export function VoiceAssistant() {
 
         {/* ── Header ── */}
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
-              <Leaf className="w-5 h-5 text-primary" />
-              {language === "hi" ? "कृषि वॉइस" : language === "mr" ? "कृषि व्हॉइस" : "Krishi Voice"}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {language === "hi" ? "बोलें या टाइप करें — हिंदी, मराठी, English" : language === "mr" ? "बोला किंवा टाइप करा" : "Speak or type — any language"}
-            </p>
+          <div className="flex items-center gap-3">
+            {/* ✅ KrishiBot Avatar — replaces the old Leaf icon */}
+            <KrishiRobotAvatar size={48} voiceState={state} />
+            <div>
+              <h1 className="text-xl font-bold text-foreground">
+                {language === "hi" ? "कृषि वॉइस" : language === "mr" ? "कृषि व्हॉइस" : "Krishi Voice"}
+              </h1>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {language === "hi" ? "बोलें या टाइप करें — हिंदी, मराठी, English" : language === "mr" ? "बोला किंवा टाइप करा" : "Speak or type — any language"}
+              </p>
+            </div>
           </div>
           {/* Motor status badge */}
           <div className={cn(
@@ -348,7 +510,6 @@ export function VoiceAssistant() {
         {/* ── Main Voice Button ── */}
         <div className="flex flex-col items-center gap-4 py-4">
           <div className="relative flex items-center justify-center">
-            {/* Rings */}
             {state === "listening" && (
               <>
                 <span className="absolute w-44 h-44 rounded-full bg-primary/5 animate-ping [animation-duration:1.5s]" />
@@ -385,7 +546,6 @@ export function VoiceAssistant() {
             </button>
           </div>
 
-          {/* State label */}
           <div className="text-center space-y-1">
             <p className={cn(
               "text-base font-semibold",
@@ -405,7 +565,6 @@ export function VoiceAssistant() {
             )}
           </div>
 
-          {/* Wake word toggle */}
           <div className="flex items-center gap-3">
             <button
               onClick={wakeMode ? stopWakeMode : startWakeMode}
@@ -500,20 +659,20 @@ export function VoiceAssistant() {
                     "max-w-[88%] flex flex-col gap-1",
                     entry.role === "user" ? "items-end" : "items-start"
                   )}>
+                    {entry.role === "assistant" && (
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <KrishiRobotAvatar size={18} voiceState="idle" />
+                        <span className="text-[10px] text-primary font-medium">KrishiBot</span>
+                      </div>
+                    )}
                     <div className={cn(
                       "rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap",
                       entry.role === "user"
                         ? "bg-primary text-primary-foreground rounded-br-sm"
                         : "bg-secondary border border-border text-foreground rounded-bl-sm"
                     )}>
-                      {entry.role === "assistant" && (
-                        <div className="flex items-center gap-1 text-[10px] text-primary mb-1 font-medium">
-                          <Leaf className="w-3 h-3" /> KrishiBot
-                        </div>
-                      )}
                       {entry.text}
                     </div>
-                    {/* Listen button on AI messages */}
                     {entry.role === "assistant" && (
                       <button
                         onClick={() => replayMessage(entry)}

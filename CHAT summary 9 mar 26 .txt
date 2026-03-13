@@ -1,0 +1,274 @@
+git add .
+git commit -m "Update"
+git push
+
+
+
+
+
+
+
+
+
+"I have a Next.js farming website called Krishi.BOT at C:\Projects\Krishi.BOT--main\. It has: Mandi prices tab, 30-day price history chart (recharts, line+bar toggle), Spraying Advisor page, Groq AI chat, trilingual (English/Hindi/Marathi). Hosted on Vercel with pnpm. Here is my project summary: Krishi.BOT — Complete Project Summary
+Project Info
+
+Here's your complete updated project summary:
+
+---
+
+# KrishiBot.BOT — Complete Project Summary
+> Paste this entire document at the start of a new chat with Claude.
+
+---
+
+## 🌐 Project Info
+- **Name:** Krishi.BOT — Smart Farming Assistant
+- **Live URL:** https://krishi-bot.vercel.app
+- **Repo Location:** `C:\Projects\Krishi.BOT--main\`
+- **Framework:** Next.js 14 + TypeScript
+- **Styling:** Tailwind CSS + shadcn/ui
+- **Package Manager:** pnpm
+- **Deployment:** Vercel (auto-deploy on `git push` to `main`)
+- **Deploy command:** `git add . && git commit -m "msg" && git push`
+- **Creator:** Prathmesh Phalke
+
+---
+
+## ⚠️ CRITICAL RULES — Never Break These
+| Rule | Detail |
+|------|--------|
+| Hook | Always use `useApp` NOT `useAppContext` |
+| Chat API input | Field name is `prompt` |
+| Chat API response | Read from `data.text` |
+| Groq text model | `llama-3.3-70b-versatile` |
+| Groq vision model | `meta-llama/llama-4-scout-17b-16e-instruct` |
+| Never paste code in PowerShell | Use VS Code only |
+| API keys | Never hardcode — use Vercel env vars |
+
+---
+
+## 🔑 Vercel Environment Variables
+| Variable | Purpose |
+|----------|---------|
+| `GROQ_API_KEY` | Groq AI (text + vision) |
+| `OPENWEATHER_API_KEY` | Live weather data |
+| `NEXT_PUBLIC_NEWSDATA_API_KEY` | Farming news |
+| `ESP8266_IP` | Pump/motor hardware control |
+| `OPENAI_API_KEY` | Present but unused |
+| `NEXT_PUBLIC_APP_URL` | Should be `https://krishi-bot.vercel.app` |
+
+---
+
+## 📁 Project File Structure
+```
+app/
+  page.tsx                    ← Dashboard/Home
+  layout.tsx                  ← Root layout (Navbar + SplashScreen)
+  globals.css
+  chat/page.tsx               ← AI Chat page
+  disease/page.tsx            ← Crop Disease Detection
+  soil/page.tsx               ← Soil Health Tracker
+  news/page.tsx               ← News + Mandi Prices
+  voice/page.tsx              ← Voice Assistant page
+  spraying/page.tsx           ← Spray Safety Advisor
+  settings/page.tsx           ← App Settings
+  mandi/history/page.tsx      ← 30-Day Mandi Price History Charts
+  api/
+    chat/route.ts             ← Main text chat API (Groq)
+    chat-vision/route.ts      ← Vision chat API (image + text, Groq llama-4-scout)
+    disease/route.ts          ← Crop disease analysis API (vision model)
+    voice/route.ts            ← Voice assistant API (live weather/news/mandi + Groq)
+    mandi/route.ts            ← Mandi price scraper (vegetablemarketprice.com)
+    weather/route.ts          ← Weather API proxy
+components/
+  navbar.tsx                  ← Top navbar (desktop) + bottom nav (mobile)
+  splash-screen.tsx           ← Animated splash on app load
+  voice-assistant.tsx         ← Voice tab main component
+  weather-widget.tsx          ← Weather + sensor cards
+  irrigation-control.tsx      ← Motor ON/OFF control
+  moisture-graph.tsx          ← Soil moisture chart
+  ui/                         ← shadcn components
+lib/
+  app-context.tsx             ← Global state (useApp hook)
+  i18n.ts                     ← Translations (en/hi/mr)
+  jarvis-engine.ts            ← Motor command detection engine
+  utils.ts
+public/
+  krishibot-logo.png          ← Transparent PNG logo
+```
+
+---
+
+## 🚀 All Features — Complete List
+
+### 1. 🏠 Dashboard (`app/page.tsx`)
+- Live sensor cards: Soil Moisture, Temperature, Humidity, Wind Speed
+- KrishiBot logo with green glow (transparent PNG, no white box)
+- Creator credit: "by Prathmesh Phalke" with pulsing green dot
+- Irrigation Control widget
+- Weather Forecast widget (OpenWeather API)
+- Soil Moisture Graph
+- Footer credit
+
+### 2. 💬 AI Chat (`app/chat/page.tsx`)
+- Full conversation chat with Groq `llama-3.3-70b-versatile`
+- Trilingual: English / Hindi / Marathi
+- Farming-focused system prompt
+- API: POST `/api/chat` with `{ prompt }` → `{ text }`
+
+### 3. 🌿 Crop Disease Detection (`app/disease/page.tsx`)
+- Upload crop/plant image (JPG, PNG, WEBP)
+- AI vision analysis using `llama-4-scout-17b-16e-instruct`
+- Returns: disease name, confidence %, symptoms, causes, treatment steps, prevention tips, urgency level
+- **Floating "Plant Doctor" chat popup:**
+  - Context pills: crop name + disease name
+  - Quick suggestion chips (trilingual)
+  - Uses `/api/chat-vision` — sends ACTUAL IMAGE to vision model
+  - Works even before analysis (asks vision model directly about uploaded image)
+  - 🎤 Voice input (mic button)
+  - 🔊 Listen/TTS on AI replies
+  - Typing animation dots
+
+### 4. 🧪 Soil Health Tracker (`app/soil/page.tsx`)
+- Input: pH, soil type, crop type, NPK values
+- AI generates: nutrient meter bars, health score ring, fertilizer plan, yield prediction, irrigation advice, improvement timeline, amendments list, suitable crops
+- **Floating chat popup:**
+  - Context pills: pH, soil type, crop, score
+  - Smart suggestions (trilingual)
+  - 🎤 Voice input + 🔊 TTS
+  - Uses `/api/chat` with soil context injected
+
+### 5. 📰 News & Mandi (`app/news/page.tsx`)
+- **News tab:** Live farming news via NewsData API, 5 categories (All/Crops/Weather/Pest/Market), article reader view
+- **Mandi tab:** Live Maharashtra APMC prices via vegetablemarketprice.com scraper, 10 districts, filter by vegetable/fruit/crop, search, trend arrows (↑↓→), 30-day history chart link
+- **Floating KrishiBot chat popup (context-aware):**
+  - News tab: injects top 5 headlines → AI discusses real news
+  - Mandi tab: injects live price data → AI gives REAL prices not guesses
+  - Context pills show active category / district + loaded count
+  - Resets when switching tabs
+  - Smart suggestions per tab (trilingual)
+  - 🎤 Voice input + 🔊 TTS
+
+### 6. 🎙️ Voice Assistant (`app/voice/page.tsx` + `components/voice-assistant.tsx`)
+- **Wake word "Hey Krishi"** — continuous background listening mode
+- **Voice Navigation** — say "open soil", "go to disease", "mandi prices" etc. → auto-navigates
+- **Quick Command Grid (8 buttons):** Weather, Mandi, Soil Advice, Disease, Irrigation, Motor ON, Motor OFF, PM-KISAN
+- **Motor Status Badge** — live green/grey indicator in header
+- **GPS location** — auto-detects coordinates, sends to API for local weather
+- **4 Live Data Sources in voice:**
+  - Weather → OpenWeather API (current conditions)
+  - Forecast → OpenWeather 12-hour forecast
+  - News → NewsData API (real headlines)
+  - Mandi prices → `/api/mandi` (real scraped prices, not AI guesses)
+- 🔊 Listen/TTS on every AI reply
+- Conversation clear button
+- Trilingual responses
+
+### 7. 💧 Spraying Safety (`app/spraying/page.tsx`)
+- Spray safety advisor based on weather conditions
+
+### 8. ⚙️ Settings (`app/settings/page.tsx`)
+- Language switcher (English / हिंदी / मराठी)
+- Theme toggle (light/dark)
+- Other app preferences
+
+### 9. 📈 Mandi History Charts (`app/mandi/history/page.tsx`)
+- 30-day price history charts for commodities
+- Note: Uses indicative data (Agmarknet API not yet registered)
+
+### 10. 🌐 Navbar (`components/navbar.tsx`)
+- **Desktop:** KrishiBot logo (transparent, green glow) + app name + all nav links + language dropdown + theme toggle
+- **Mobile:** Bottom tab bar with 5 main tabs + "More" slide-up drawer (Voice, Spraying, Settings)
+
+### 11. ✨ Splash Screen (`components/splash-screen.tsx`)
+- Shows on every page load for 2.2 seconds
+- Animated: floating logo with pulsing green rings + bouncing dots
+- Dark bg with subtle green grid pattern + radial glow
+- "Made with 🌱 by Prathmesh Phalke"
+- Smooth fade-out transition
+
+---
+
+## 🤖 API Routes Summary
+
+### `/api/chat` (POST)
+- Input: `{ prompt: string, language?: string }`
+- Output: `{ text: string }`
+- Model: `llama-3.3-70b-versatile`
+- Used by: Soil page chat, News/Mandi chat, general chat
+
+### `/api/chat-vision` (POST)
+- Input: `{ message: string, imageBase64: string, language?: string, context?: string }`
+- Output: `{ text: string }`
+- Model: `llama-4-scout-17b-16e-instruct` (vision) when image present, falls back to text model
+- Used by: Disease page chat popup
+- Key feature: Sends actual image to vision model so AI can SEE the plant
+
+### `/api/disease` (POST)
+- Input: FormData with `image` file
+- Output: Full disease analysis JSON
+- Model: `llama-4-scout-17b-16e-instruct`
+
+### `/api/voice` (POST)
+- Input: `{ prompt, language, lat?, lon? }`
+- Output: `{ text: string }`
+- maxDuration: 30 seconds
+- Features: Motor command detection → intent detection → live data fetch → Groq answer
+- Intent keywords: weather/forecast/news/mandi + all commodity names in en/hi/mr
+
+### `/api/mandi` (GET/POST)
+- Input: `{ district: string }`
+- Output: `{ success, records[], source, sourceUrl }`
+- Scrapes vegetablemarketprice.com, falls back to mock data
+
+---
+
+## 🌍 Multilingual Support
+Every page supports 3 languages switchable live:
+- **English** (en) — TTS lang: `en-IN`
+- **Hindi** (हिंदी) — TTS lang: `hi-IN`
+- **Marathi** (मराठी) — TTS lang: `mr-IN`
+
+All chat system prompts instruct AI to respond in the selected language.
+
+---
+
+## 🎤 Voice Features (Common Pattern Across Pages)
+Used on: Disease, Soil, News/Mandi, Voice tab
+```
+🎤 Mic button → Web Speech API → auto-sends transcript
+🔊 Listen button → SpeechSynthesis → reads AI reply aloud
+Strips emojis via cleanForSpeech() before TTS
+```
+
+---
+
+## ⚠️ Known Limitations / Pending Items
+| Issue | Status |
+|-------|--------|
+| Web Speech API | Chrome/Edge only, Safari partial, Firefox unsupported |
+| Agmarknet API | Not registered — mandi history uses indicative data |
+| Mandi scraper | May fail → falls back to mock data |
+| News articles | Real via NewsData API ✅ |
+| Soil chat image | Not yet implemented |
+| WhatsApp integration | Suggested but not built |
+| Daily briefing | Suggested but not built |
+
+---
+
+## 💡 Suggested Future Features (Not Yet Built)
+1. **WhatsApp Bot** — Twilio + WhatsApp Cloud API, voice note → transcribe → Groq reply
+2. **Daily Briefing** — "Good morning Krishi" → auto reads weather + news + mandi prices
+3. **Spray Safety by Voice** — "Safe to spray today?" → checks wind/humidity/temp
+4. **Agmarknet API** — Register to get real historical mandi price data
+5. **Soil chat image** — Upload soil photo in soil page chat
+6. **Offline mode** — Cache last data for areas with poor connectivity
+
+---
+
+## 🖼️ Branding
+- **Logo:** `public/krishibot-logo.png` — transparent PNG (white bg removed), robot holding soil with plant, green cap, farm background
+- **Primary color:** Green (`#22c55e` / Tailwind `primary`)
+- **Logo usage:** Transparent with `drop-shadow(0 0 Xpx rgba(34,197,94,0.X))` green glow — NO white box backgrounds
+- **Creator credit:** "Made with 🌱 by Prathmesh Phalke" — appears on splash screen, dashboard header, and dashboard footer
