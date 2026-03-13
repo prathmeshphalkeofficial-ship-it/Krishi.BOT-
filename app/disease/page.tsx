@@ -134,11 +134,180 @@ const confidenceColors: Record<string, string> = {
   Low: "text-red-400",
 };
 
+// ── KrishiBot Avatar — cursor-tracking glowing eyes ───────────────────────────
+function KrishiRobotAvatar({
+  size = 72,
+  chatOpen = false,
+  hasNotification = false,
+}: {
+  size?: number;
+  chatOpen?: boolean;
+  hasNotification?: boolean;
+}) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [eyeOffset, setEyeOffset] = useState({ x: 0, y: 0 });
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      const angle = Math.atan2(
+        e.clientY - (rect.top + rect.height / 2),
+        e.clientX - (rect.left + rect.width / 2)
+      );
+      const d = 4.5;
+      setEyeOffset({ x: Math.cos(angle) * d, y: Math.sin(angle) * d });
+    };
+    window.addEventListener("mousemove", onMove);
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+
+  useEffect(() => {
+    const blink = () => {
+      setIsBlinking(true);
+      setTimeout(() => setIsBlinking(false), 140);
+      setTimeout(blink, 2800 + Math.random() * 3500);
+    };
+    const t = setTimeout(blink, 2000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const LEX = 46, LEY = 52;
+  const REX = 74, REY = 52;
+  const lx = chatOpen ? LEX : LEX + eyeOffset.x;
+  const ly = chatOpen ? LEY : LEY + eyeOffset.y;
+  const rx = chatOpen ? REX : REX + eyeOffset.x;
+  const ry = chatOpen ? REY : REY + eyeOffset.y;
+
+  const borderColor = chatOpen ? "#f97316" : "#22c55e";
+  const glowColor = chatOpen ? "rgba(249,115,22,0.75)" : "rgba(34,197,94,0.6)";
+  const eyeRingColor = chatOpen ? "#f97316" : "#aaee00";
+  const irisColor = chatOpen ? "#ff6600" : "#bbee00";
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg
+        ref={svgRef}
+        width={size}
+        height={size}
+        viewBox="0 0 120 120"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{
+          cursor: "pointer",
+          transition: "transform 0.25s, filter 0.25s",
+          transform: hovered ? "scale(1.08)" : "scale(1)",
+          filter: `drop-shadow(0 0 ${hovered ? "20px" : "9px"} ${glowColor})`,
+          display: "block",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => { setHovered(false); setEyeOffset({ x: 0, y: 0 }); }}
+      >
+        <defs>
+          <clipPath id="kb-dis-circ"><circle cx="60" cy="60" r="58" /></clipPath>
+          <radialGradient id="kb-dis-sky" cx="50%" cy="60%" r="55%">
+            <stop offset="0%" stopColor="#f5c842" />
+            <stop offset="60%" stopColor="#a8d448" />
+            <stop offset="100%" stopColor="#3a7d1e" />
+          </radialGradient>
+          <radialGradient id="kb-dis-helm" cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stopColor="#6dbe2e" />
+            <stop offset="70%" stopColor="#2d7a0a" />
+            <stop offset="100%" stopColor="#1a4f05" />
+          </radialGradient>
+          <radialGradient id="kb-dis-body" cx="40%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#3a3a3a" />
+            <stop offset="100%" stopColor="#0d0d0d" />
+          </radialGradient>
+          <radialGradient id="kb-dis-iris" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#ffff66" />
+            <stop offset="45%" stopColor={irisColor} />
+            <stop offset="100%" stopColor="#336600" />
+          </radialGradient>
+        </defs>
+
+        <circle cx="60" cy="60" r="59" fill="#1a1a1a" stroke={borderColor} strokeWidth="2.5" />
+
+        <g clipPath="url(#kb-dis-circ)">
+          <rect x="0" y="0" width="120" height="120" fill="url(#kb-dis-sky)" />
+          <ellipse cx="60" cy="110" rx="70" ry="28" fill="#3a7d1e" />
+          <ellipse cx="60" cy="106" rx="56" ry="18" fill="#4a9a24" />
+          <ellipse cx="17" cy="79" rx="12" ry="14" fill="#2d6e10" />
+          <rect x="14" y="86" width="6" height="10" fill="#5a3010" />
+          <ellipse cx="103" cy="79" rx="12" ry="14" fill="#2d6e10" />
+          <rect x="100" y="86" width="6" height="10" fill="#5a3010" />
+          <path d="M28 44 Q22 38 26 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+          <path d="M24 48 Q14 39 20 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+          <path d="M92 44 Q98 38 94 32" stroke="#22c55e" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.9" />
+          <path d="M96 48 Q106 39 100 28" stroke="#22c55e" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.55" />
+          <rect x="38" y="72" width="44" height="34" rx="10" fill="url(#kb-dis-body)" stroke="#222" strokeWidth="1" />
+          <rect x="22" y="74" width="18" height="28" rx="9" fill="url(#kb-dis-body)" stroke="#222" strokeWidth="1" />
+          <rect x="80" y="74" width="18" height="28" rx="9" fill="url(#kb-dis-body)" stroke="#222" strokeWidth="1" />
+          <ellipse cx="31" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+          <ellipse cx="89" cy="104" rx="11" ry="6" fill="#1a1a1a" stroke="#333" strokeWidth="1" />
+          <ellipse cx="60" cy="104" rx="18" ry="8" fill="#6b3a1f" />
+          <ellipse cx="60" cy="101" rx="14" ry="5" fill="#7c4a25" />
+          <rect x="58.5" y="84" width="3" height="18" rx="1.5" fill="#2d7a0a" />
+          <ellipse cx="52" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(-30 52 86)" />
+          <ellipse cx="68" cy="86" rx="8" ry="5" fill="#3aaa18" transform="rotate(30 68 86)" />
+          <rect x="52" y="60" width="16" height="14" rx="4" fill="#1e1e1e" />
+          <ellipse cx="60" cy="50" rx="28" ry="30" fill="url(#kb-dis-helm)" stroke="#1a5c0a" strokeWidth="1.5" />
+          <ellipse cx="52" cy="36" rx="8" ry="5" fill="rgba(255,255,255,0.18)" transform="rotate(-20 52 36)" />
+          <ellipse cx="60" cy="60" rx="28" ry="7" fill="#111" stroke="#1a5c0a" strokeWidth="1.2" />
+          <ellipse cx="60" cy="59" rx="22" ry="5" fill="#0d1a0d" opacity="0.85" />
+          <rect x="58.5" y="20" width="3" height="10" rx="1.5" fill="#2d7a0a" />
+          <ellipse cx="60" cy="18" rx="7" ry="5" fill="#4ade80" transform="rotate(-15 60 18)" />
+
+          {/* Eye whites */}
+          <circle cx={LEX} cy={LEY} r="9.5" fill="white" />
+          <circle cx={REX} cy={REY} r="9.5" fill="white" />
+          <circle cx={LEX} cy={LEY} r="9.5" fill="none" stroke={eyeRingColor} strokeWidth="1.8" opacity="0.6" />
+          <circle cx={REX} cy={REY} r="9.5" fill="none" stroke={eyeRingColor} strokeWidth="1.8" opacity="0.6" />
+
+          {chatOpen ? (
+            <>
+              <line x1={LEX - 5} y1={LEY - 5} x2={LEX + 5} y2={LEY + 5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={LEX + 5} y1={LEY - 5} x2={LEX - 5} y2={LEY + 5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={REX - 5} y1={REY - 5} x2={REX + 5} y2={REY + 5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+              <line x1={REX + 5} y1={REY - 5} x2={REX - 5} y2={REY + 5} stroke="#f97316" strokeWidth="3" strokeLinecap="round" />
+            </>
+          ) : !isBlinking ? (
+            <>
+              <circle cx={lx} cy={ly} r="6" fill="url(#kb-dis-iris)" />
+              <circle cx={rx} cy={ry} r="6" fill="url(#kb-dis-iris)" />
+              <circle cx={lx} cy={ly} r="2.5" fill="#1a3300" opacity="0.75" />
+              <circle cx={rx} cy={ry} r="2.5" fill="#1a3300" opacity="0.75" />
+              <circle cx={lx - 2.5} cy={ly - 2.5} r="2.2" fill="white" opacity="0.85" />
+              <circle cx={rx - 2.5} cy={ry - 2.5} r="2.2" fill="white" opacity="0.85" />
+            </>
+          ) : (
+            <>
+              <ellipse cx={LEX} cy={LEY} rx="6" ry="1.2" fill="#ccee00" />
+              <ellipse cx={REX} cy={REY} rx="6" ry="1.2" fill="#ccee00" />
+            </>
+          )}
+        </g>
+
+        <path d="M10 112 Q40 100 60 108 Q80 116 110 104" stroke="#f97316" strokeWidth="2.5" fill="none" strokeLinecap="round" opacity="0.85" />
+        <path d="M10 115 Q40 103 60 111 Q80 119 110 107" stroke="#22c55e" strokeWidth="1.8" fill="none" strokeLinecap="round" opacity="0.55" />
+        <circle cx="60" cy="60" r="58" fill="none" stroke={borderColor} strokeWidth="2" opacity="0.85" />
+        <circle cx="60" cy="60" r="55" fill="none" stroke="#4ade80" strokeWidth="0.8" opacity="0.35" />
+      </svg>
+
+      {hasNotification && !chatOpen && (
+        <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-background animate-pulse" />
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DiseasePage() {
   const { language } = useApp();
   const t = translations[language as keyof typeof translations] || translations.en;
 
-  // ── Existing state ──────────────────────────────────────────────────────────
   const [image, setImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -146,7 +315,6 @@ export default function DiseasePage() {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Chat state ──────────────────────────────────────────────────────────────
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -154,13 +322,11 @@ export default function DiseasePage() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Voice state ─────────────────────────────────────────────────────────────
   const [isListening, setIsListening] = useState(false);
   const [speakingIndex, setSpeakingIndex] = useState<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Reset greeting when result or language changes
   useEffect(() => {
     setChatMessages([{
       role: "assistant",
@@ -168,17 +334,14 @@ export default function DiseasePage() {
     }]);
   }, [result, language]);
 
-  // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, chatLoading]);
 
-  // Focus input when chat opens
   useEffect(() => {
     if (chatOpen) setTimeout(() => chatInputRef.current?.focus(), 100);
   }, [chatOpen]);
 
-  // ── Existing handlers ───────────────────────────────────────────────────────
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith("image/")) return;
     setImageFile(file);
@@ -222,7 +385,6 @@ export default function DiseasePage() {
     setResult(null);
   };
 
-  // ── Build disease context for chat ──────────────────────────────────────────
   function buildContext(): string {
     if (!result || result.error || result.is_healthy) return "";
     return `
@@ -237,26 +399,18 @@ Prevention: ${result.prevention?.join("; ") || "—"}
     `.trim();
   }
 
-  // ── Send chat message ───────────────────────────────────────────────────────
   async function sendChat(text?: string) {
     const message = (text ?? chatInput).trim();
     if (!message || chatLoading) return;
     setChatInput("");
     setChatMessages((prev) => [...prev, { role: "user", content: message }]);
     setChatLoading(true);
-
     try {
       const ctx = buildContext();
-      // Use vision API whenever image is available (with or without analysis result)
       const res = await fetch("/api/chat-vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          imageBase64: image ?? "",   // base64 data:image/... string
-          language,
-          context: ctx,               // existing analysis result if any
-        }),
+        body: JSON.stringify({ message, imageBase64: image ?? "", language, context: ctx }),
       });
       const data = await res.json();
       setChatMessages((prev) => [...prev, { role: "assistant", content: data.text ?? t.error }]);
@@ -267,10 +421,9 @@ Prevention: ${result.prevention?.join("; ") || "—"}
     }
   }
 
-  // ── Strip emojis and symbols for TTS ───────────────────────────────────────
   function cleanForSpeech(text: string): string {
     return text
-      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "") // emojis
+      .replace(/[\u{1F300}-\u{1FAFF}]/gu, "")
       .replace(/[🌿🔬💊🧫🔍🛡️⏰✅⚠️🌾📷☀️🍃]/g, "")
       .replace(/[•*#_~`>|]/g, "")
       .replace(/\n+/g, ". ")
@@ -278,90 +431,52 @@ Prevention: ${result.prevention?.join("; ") || "—"}
       .trim();
   }
 
-  // ── Speak a message ─────────────────────────────────────────────────────────
   function speakMessage(text: string, index: number) {
     if (!window.speechSynthesis) return;
-
-    // Stop any current speech
     window.speechSynthesis.cancel();
-
-    if (speakingIndex === index) {
-      setSpeakingIndex(null);
-      return;
-    }
-
+    if (speakingIndex === index) { setSpeakingIndex(null); return; }
     const cleaned = cleanForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleaned);
     utteranceRef.current = utterance;
-
-    // Set language for TTS
     utterance.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
     utterance.rate = 0.95;
     utterance.pitch = 1;
-
     utterance.onstart = () => setSpeakingIndex(index);
     utterance.onend = () => setSpeakingIndex(null);
     utterance.onerror = () => setSpeakingIndex(null);
-
     window.speechSynthesis.speak(utterance);
   }
 
-  // ── Voice input (mic) ───────────────────────────────────────────────────────
   function toggleVoiceInput() {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      alert("Voice input not supported on this browser. Try Chrome.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) { alert("Voice input not supported on this browser. Try Chrome."); return; }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     recognition.lang = language === "hi" ? "hi-IN" : language === "mr" ? "mr-IN" : "en-IN";
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-
     recognition.onstart = () => setIsListening(true);
     recognition.onend = () => setIsListening(false);
     recognition.onerror = () => setIsListening(false);
-
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setChatInput(transcript);
-      // Auto-send after a short delay
-      setTimeout(() => {
-        setChatInput("");
-        sendChatWithText(transcript);
-      }, 400);
+      setTimeout(() => { setChatInput(""); sendChatWithText(transcript); }, 400);
     };
-
     recognition.start();
   }
 
-  // ── sendChat variant that accepts explicit text (needed for voice auto-send) ─
   async function sendChatWithText(message: string) {
     if (!message.trim() || chatLoading) return;
     setChatMessages((prev) => [...prev, { role: "user", content: message }]);
     setChatLoading(true);
-
     try {
       const ctx = buildContext();
       const res = await fetch("/api/chat-vision", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message,
-          imageBase64: image ?? "",
-          language,
-          context: ctx,
-        }),
+        body: JSON.stringify({ message, imageBase64: image ?? "", language, context: ctx }),
       });
       const data = await res.json();
       setChatMessages((prev) => [...prev, { role: "assistant", content: data.text ?? t.error }]);
@@ -371,7 +486,6 @@ Prevention: ${result.prevention?.join("; ") || "—"}
       setChatLoading(false);
     }
   }
-
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -448,7 +562,7 @@ Prevention: ${result.prevention?.join("; ") || "—"}
           </div>
         )}
 
-        {/* Analyze Button — outside upload zone, no propagation issues */}
+        {/* Analyze Button */}
         {image && !result && (
           <button
             onClick={analyze}
@@ -547,50 +661,47 @@ Prevention: ${result.prevention?.join("; ") || "—"}
         )}
       </div>
 
-      {/* ── Floating Chat Button ──────────────────────────────────────────────── */}
-      {!chatOpen && (
-        <div className="fixed bottom-20 right-4 md:bottom-6 z-50">
-          <button
-            onClick={() => setChatOpen(true)}
-            className="relative w-14 h-14 rounded-full bg-primary text-white shadow-lg
-              flex items-center justify-center text-2xl hover:scale-110 active:scale-95 transition-transform"
-          >
-            💬
-            {result && !result.error && (
-              <span className="absolute top-0.5 right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-background animate-pulse" />
-            )}
-          </button>
-        </div>
-      )}
+      {/* ── Floating KrishiBot Avatar (replaces old 💬 button) ── */}
+      <div className="fixed bottom-20 right-4 md:bottom-6 z-50">
+        <button
+          onClick={() => setChatOpen(o => !o)}
+          className="transition-all active:scale-95"
+          aria-label="Open Plant Doctor chat"
+        >
+          <KrishiRobotAvatar
+            size={72}
+            chatOpen={chatOpen}
+            hasNotification={!chatOpen && result != null && !result.error}
+          />
+        </button>
+      </div>
 
-      {/* ── Chat Popup ────────────────────────────────────────────────────────── */}
+      {/* ── Chat Popup ─────────────────────────────────────────────────────── */}
       {chatOpen && (
         <div
-          className="fixed bottom-20 right-4 md:bottom-6 z-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden
+          className="fixed bottom-36 right-4 md:bottom-24 z-50 flex flex-col rounded-2xl shadow-2xl overflow-hidden
             border border-border bg-card w-[calc(100vw-2rem)] max-w-sm"
           style={{ height: "480px" }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary/10 shrink-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-lg shrink-0">🌿</span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-foreground">{t.chatTitle}</p>
-                {result && !result.error && (
-                  <div className="flex gap-1 mt-0.5 flex-wrap">
-                    {result.affected_crop && (
-                      <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                        {result.affected_crop}
-                      </span>
-                    )}
-                    {result.disease && (
-                      <span className="text-[10px] bg-red-400/20 text-red-400 px-2 py-0.5 rounded-full">
-                        {result.disease}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-primary/10 shrink-0">
+            <KrishiRobotAvatar size={32} chatOpen={false} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">{t.chatTitle}</p>
+              {result && !result.error && (
+                <div className="flex gap-1 mt-0.5 flex-wrap">
+                  {result.affected_crop && (
+                    <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full">
+                      {result.affected_crop}
+                    </span>
+                  )}
+                  {result.disease && (
+                    <span className="text-[10px] bg-red-400/20 text-red-400 px-2 py-0.5 rounded-full">
+                      {result.disease}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <button
               onClick={() => setChatOpen(false)}
@@ -605,6 +716,12 @@ Prevention: ${result.prevention?.join("; ") || "—"}
             {chatMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                 <div className={`max-w-[85%] flex flex-col gap-1 ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                  {msg.role === "assistant" && (
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <KrishiRobotAvatar size={18} chatOpen={false} />
+                      <span className="text-[10px] text-primary font-medium">KrishiBot</span>
+                    </div>
+                  )}
                   <div
                     className={`rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap
                       ${msg.role === "user"
@@ -614,7 +731,6 @@ Prevention: ${result.prevention?.join("; ") || "—"}
                   >
                     {msg.content}
                   </div>
-                  {/* Listen button — only on AI messages */}
                   {msg.role === "assistant" && (
                     <button
                       onClick={() => speakMessage(msg.content, i)}
@@ -698,8 +814,7 @@ Prevention: ${result.prevention?.join("; ") || "—"}
   );
 }
 
-// ── Section Component (unchanged from original) ───────────────────────────────
-
+// ── Section Component ─────────────────────────────────────────────────────────
 function Section({
   icon, title, items, color, numbered,
 }: {
