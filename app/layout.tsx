@@ -17,6 +17,9 @@ export const metadata: Metadata = {
     icon: '/icon.png',
     shortcut: '/icon.png',
   },
+  other: {
+    'icon': '/icon.png',
+  },
 }
 
 export const viewport: Viewport = {
