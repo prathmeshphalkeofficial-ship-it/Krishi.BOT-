@@ -13,7 +13,9 @@ export const metadata: Metadata = {
   title: 'KrishiBot AI Pro - Smart Multilingual Farming Assistant',
   description: 'AI-powered smart farming platform with irrigation control, soil monitoring, weather updates, and multilingual voice assistant for Indian farmers.',
   generator: 'v0.app',
-  icons: '/icon.png',
+  icons: {
+    icon: '/icon.png',
+  },
 }
 
 export const viewport: Viewport = {
