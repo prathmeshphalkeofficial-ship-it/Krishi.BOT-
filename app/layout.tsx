@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   description: 'AI-powered smart farming platform with irrigation control, soil monitoring, weather updates, and multilingual voice assistant for Indian farmers.',
   generator: 'v0.app',
   icons: {
-    icon: '/icon.svg',
+    icon: '/icon.png',
   },
 }
 
