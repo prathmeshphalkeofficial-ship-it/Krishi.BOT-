@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   generator: 'v0.app',
   icons: {
     icon: '/icon.png',
+    shortcut: '/icon.png',
   },
 }
 
